@@ -18,6 +18,8 @@ import { portfolioConfig } from '../data/config';
 	<ScrollIndicator totalSections={6} />
 
 	<div id="scroll-root" class="relative">
+		<!-- Test animated ball for scroll progress -->
+		<div id="scroll-progress-ball" class="scroll-progress-ball"></div>
 		<div class="scroll-stage relative h-screen w-full overflow-hidden">
 			<section id="home" class="scroll-panel flex min-h-screen w-full items-center justify-center">
 				<Hero
@@ -79,8 +81,9 @@ import { portfolioConfig } from '../data/config';
 		console.log('[GSAP] initScrollExperience', { total: sections.length });
 
 		const total = sections.length;
-		const SECTION_SCROLL_UNITS = 8; // Increased for slower section transitions
-		const TIMELINE_SCROLL_UNITS = 12; // Increased for slower timeline progression
+		const SECTION_SCROLL_UNITS = 0.80; // Reduced for faster scrolling
+		const TIMELINE_SCROLL_UNITS = 0.75; // Reduced for faster timeline progression
+		const SECTION_TOLERANCE = 0.25; // Dead zone at start/end of each section (0-1 range)
 		const setHeight = () => {
 			const timelineSection = sections.find((section) => section.id === 'timeline');
 			const timelineEntries = timelineSection
@@ -129,51 +132,68 @@ import { portfolioConfig } from '../data/config';
 		});
 		gsap.set(sections[0], { autoAlpha: 1, y: 0, x: 0 });
 
+		// Initialize scroll progress ball
+		const progressBall = document.getElementById('scroll-progress-ball');
+		if (progressBall) {
+			gsap.set(progressBall, { x: 0, y: 50 });
+		}
+
 		let activeIndex = 0;
 
 		const updateProgress = (exactProgress) => {
-			// Use a smoother interpolation for section transitions
-			const currentIndex = Math.floor(exactProgress);
-			const nextIndex = Math.min(total - 1, currentIndex + 1);
-			// Use a smoother easing function for the fraction
-			const rawFrac = exactProgress - currentIndex;
-			const frac = Math.max(0, Math.min(1, rawFrac));
+			// Use threshold-based discrete switching like the timeline
+			// Calculate which section should be active based on progress with tolerance
+			const rawFrac = exactProgress - Math.floor(exactProgress);
+			let targetIndex = Math.floor(exactProgress);
+			
+			// Apply tolerance: only switch to next section after crossing the threshold
+			// This creates discrete sections that don't overlap
+			if (rawFrac < SECTION_TOLERANCE) {
+				// In the start tolerance zone: stay at current section
+				targetIndex = Math.floor(exactProgress);
+			} else if (rawFrac > 1 - SECTION_TOLERANCE) {
+				// In the end tolerance zone: switch to next section
+				targetIndex = Math.min(total - 1, Math.floor(exactProgress) + 1);
+			} else {
+				// In the transition zone: determine based on midpoint
+				targetIndex = rawFrac < 0.5 
+					? Math.floor(exactProgress)
+					: Math.min(total - 1, Math.floor(exactProgress) + 1);
+			}
+			
+			// Clamp to valid range
+			targetIndex = Math.max(0, Math.min(total - 1, targetIndex));
 
-			sections.forEach((section, i) => {
-				const xOffset = i % 2 === 0 ? -60 : 60;
-				if (i === currentIndex) {
-					gsap.to(section, {
-						autoAlpha: 1 - frac,
-						y: 0 + 20 * frac,
-						x: 0,
-						duration: 0.2,
-						ease: 'power2.out',
-						overwrite: true,
-					});
-				} else if (i === nextIndex) {
-					gsap.to(section, {
-						autoAlpha: frac,
-						y: 40 - 40 * frac,
-						x: xOffset * (1 - frac),
-						duration: 0.2,
-						ease: 'power2.out',
-						overwrite: true,
-					});
-				} else {
-					gsap.to(section, {
-						autoAlpha: 0,
-						y: 40,
-						x: xOffset,
-						duration: 0.2,
-						ease: 'power2.out',
-						overwrite: true,
-					});
-				}
-			});
+			// Only update sections when the target index changes (discrete switching)
+			if (targetIndex !== activeIndex) {
+				activeIndex = targetIndex;
+				
+				// Hide all sections first
+				sections.forEach((section, i) => {
+					const xOffset = i % 2 === 0 ? -60 : 60;
+					if (i === activeIndex) {
+						// Show active section
+						gsap.to(section, {
+							autoAlpha: 1,
+							y: 0,
+							x: 0,
+							duration: 0.3,
+							ease: 'power2.out',
+							overwrite: true,
+						});
+					} else {
+						// Hide inactive sections
+						gsap.to(section, {
+							autoAlpha: 0,
+							y: 40,
+							x: xOffset,
+							duration: 0.3,
+							ease: 'power2.out',
+							overwrite: true,
+						});
+					}
+				});
 
-			const newActive = Math.round(exactProgress);
-			if (newActive !== activeIndex) {
-				activeIndex = newActive;
 				window.dispatchEvent(new CustomEvent('sectionchange', {
 					detail: { index: activeIndex }
 				}));
@@ -243,6 +263,25 @@ import { portfolioConfig } from '../data/config';
 				
 				console.log('[GSAP] progress', self.progress.toFixed(3), 'exact', exactProgress.toFixed(2), 'mapped', clampedMappedProgress.toFixed(2), 'timeline', clampedTimelineProgress.toFixed(3));
 				updateProgress(clampedMappedProgress);
+
+				// Update animated ball based on scroll progress (like timeline progress bar)
+				const progressBall = document.getElementById('scroll-progress-ball');
+				if (progressBall) {
+					const scrollProgress = self.progress; // 0 to 1
+					// Animate ball position horizontally across the screen
+					const maxX = window.innerWidth - 60; // Account for ball width
+					const xPosition = scrollProgress * maxX;
+					// Also add some vertical movement for visual interest
+					const yPosition = 50 + Math.sin(scrollProgress * Math.PI * 4) * 30;
+					
+					gsap.to(progressBall, {
+						x: xPosition,
+						y: yPosition,
+						duration: 0.1,
+						ease: 'none',
+						overwrite: true,
+					});
+				}
 
 				if (timelineIndex >= 0) {
 					window.dispatchEvent(new CustomEvent('timelineprogress', {
@@ -346,5 +385,20 @@ import { portfolioConfig } from '../data/config';
 	.scroll-panel .section {
 		opacity: 1 !important;
 		transform: none !important;
+	}
+
+	/* Test animated ball for scroll progress */
+	.scroll-progress-ball {
+		position: fixed;
+		top: 50px;
+		left: 0;
+		width: 60px;
+		height: 60px;
+		border-radius: 50%;
+		background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+		box-shadow: 0 0 30px rgba(99, 102, 241, 0.6), 0 0 60px rgba(139, 92, 246, 0.4);
+		z-index: 9999;
+		pointer-events: none;
+		transform: translate(0, 0);
 	}
 </style>
