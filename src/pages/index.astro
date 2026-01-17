@@ -1,11 +1,350 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import Navbar from '../components/Navbar.astro';
+import Hero from '../components/Hero.astro';
+import About from '../components/About.astro';
+import Skills from '../components/Skills.astro';
+import Projects from '../components/Projects.astro';
+import HorizontalTimeline from '../components/HorizontalTimeline.astro';
+import Contact from '../components/Contact.astro';
+import Footer from '../components/Footer.astro';
+import ScrollIndicator from '../components/ScrollIndicator.astro';
+import { portfolioConfig } from '../data/config';
 ---
 
 <Layout>
-	<Welcome />
+	<Navbar logo={portfolioConfig.nav.logo} links={portfolioConfig.nav.links} />
+
+	<ScrollIndicator totalSections={6} />
+
+	<div id="scroll-root" class="relative">
+		<div class="scroll-stage relative h-screen w-full overflow-hidden">
+			<section id="home" class="scroll-panel flex min-h-screen w-full items-center justify-center">
+				<Hero
+					greeting={portfolioConfig.hero.greeting}
+					name={portfolioConfig.hero.name}
+					role={portfolioConfig.hero.role}
+					description={portfolioConfig.hero.description}
+					primaryButton={portfolioConfig.hero.primaryButton}
+					secondaryButton={portfolioConfig.hero.secondaryButton}
+				/>
+			</section>
+
+			<section id="about" class="scroll-panel flex min-h-screen w-full items-center justify-center">
+				<About
+					paragraphs={portfolioConfig.about.paragraphs}
+					stats={portfolioConfig.about.stats}
+					showImage={portfolioConfig.about.showImage}
+				/>
+			</section>
+
+			<section id="skills" class="scroll-panel flex min-h-screen w-full items-center justify-center">
+				<Skills categories={portfolioConfig.skills.categories} />
+			</section>
+
+			<section id="projects" class="scroll-panel flex min-h-screen w-full items-center justify-center">
+				<Projects projects={portfolioConfig.projects} />
+			</section>
+
+		<HorizontalTimeline />
+
+			<section id="contact" class="scroll-panel flex min-h-screen w-full items-center justify-center">
+				<Contact
+					description={portfolioConfig.contact.description}
+					email={portfolioConfig.contact.email}
+					socialLinks={portfolioConfig.contact.socialLinks}
+				/>
+				<Footer text={portfolioConfig.footer.text} year={portfolioConfig.footer.year} />
+			</section>
+		</div>
+	</div>
 </Layout>
+
+<script>
+	// @ts-nocheck
+	import gsap from 'gsap';
+	import ScrollTrigger from 'gsap/ScrollTrigger';
+
+	gsap.registerPlugin(ScrollTrigger);
+
+	function initScrollExperience() {
+		const scrollRoot = document.querySelector('#scroll-root');
+		const scrollStage = document.querySelector('.scroll-stage');
+		const sections = Array.from(document.querySelectorAll('.scroll-panel'));
+
+		if (!scrollRoot || !scrollStage || !sections.length) {
+			return;
+		}
+
+		console.log('[GSAP] initScrollExperience', { total: sections.length });
+
+		const total = sections.length;
+		const SECTION_SCROLL_UNITS = 8; // Increased for slower section transitions
+		const TIMELINE_SCROLL_UNITS = 12; // Increased for slower timeline progression
+		const setHeight = () => {
+			const timelineSection = sections.find((section) => section.id === 'timeline');
+			const timelineEntries = timelineSection
+				? parseInt(timelineSection.dataset.timelineEntries || '1', 10)
+				: 1;
+			const timelineSegments = Math.max(0, timelineEntries - 1);
+			const timelineUnits = timelineSegments > 0
+				? timelineSegments * TIMELINE_SCROLL_UNITS
+				: SECTION_SCROLL_UNITS;
+			const timelineIndex = sections.findIndex((section) => section.id === 'timeline');
+			const extraUnits = timelineIndex >= 0 ? Math.max(0, timelineUnits - SECTION_SCROLL_UNITS) : 0;
+			const totalSegments = (total - 1) * SECTION_SCROLL_UNITS + extraUnits;
+			const scrollDistance = (totalSegments + 1) * window.innerHeight;
+
+			scrollRoot.dataset.totalSegments = `${totalSegments}`;
+			scrollRoot.dataset.timelineSegments = `${timelineSegments}`;
+			scrollRoot.dataset.timelineUnits = `${timelineUnits}`;
+			scrollRoot.dataset.timelineExtraUnits = `${extraUnits}`;
+			scrollRoot.style.height = `${scrollDistance}px`;
+			console.log('[GSAP] scrollRoot height set', {
+				scrollDistance,
+				totalSegments,
+				timelineSegments,
+				timelineUnits,
+				extraUnits,
+				timelineEntries,
+				SECTION_SCROLL_UNITS,
+				TIMELINE_SCROLL_UNITS
+			});
+			return scrollDistance;
+		};
+
+		let scrollDistance = setHeight();
+
+		sections.forEach((section, index) => {
+			const xOffset = index % 2 === 0 ? -60 : 60;
+			gsap.set(section, {
+				autoAlpha: 0,
+				y: 40,
+				x: xOffset,
+				position: 'absolute',
+				top: 0,
+				left: 0,
+				width: '100%',
+			});
+		});
+		gsap.set(sections[0], { autoAlpha: 1, y: 0, x: 0 });
+
+		let activeIndex = 0;
+
+		const updateProgress = (exactProgress) => {
+			// Use a smoother interpolation for section transitions
+			const currentIndex = Math.floor(exactProgress);
+			const nextIndex = Math.min(total - 1, currentIndex + 1);
+			// Use a smoother easing function for the fraction
+			const rawFrac = exactProgress - currentIndex;
+			const frac = Math.max(0, Math.min(1, rawFrac));
+
+			sections.forEach((section, i) => {
+				const xOffset = i % 2 === 0 ? -60 : 60;
+				if (i === currentIndex) {
+					gsap.to(section, {
+						autoAlpha: 1 - frac,
+						y: 0 + 20 * frac,
+						x: 0,
+						duration: 0.2,
+						ease: 'power2.out',
+						overwrite: true,
+					});
+				} else if (i === nextIndex) {
+					gsap.to(section, {
+						autoAlpha: frac,
+						y: 40 - 40 * frac,
+						x: xOffset * (1 - frac),
+						duration: 0.2,
+						ease: 'power2.out',
+						overwrite: true,
+					});
+				} else {
+					gsap.to(section, {
+						autoAlpha: 0,
+						y: 40,
+						x: xOffset,
+						duration: 0.2,
+						ease: 'power2.out',
+						overwrite: true,
+					});
+				}
+			});
+
+			const newActive = Math.round(exactProgress);
+			if (newActive !== activeIndex) {
+				activeIndex = newActive;
+				window.dispatchEvent(new CustomEvent('sectionchange', {
+					detail: { index: activeIndex }
+				}));
+			}
+		};
+
+		ScrollTrigger.create({
+			trigger: scrollRoot,
+			start: 'top top',
+			end: () => `+=${scrollDistance - window.innerHeight}`,
+			scrub: 2, // Increased for smoother, slower transitions
+			pin: scrollStage,
+			anticipatePin: 1,
+			snap: false,
+			onUpdate: (self) => {
+				const totalSegments = parseInt(
+					scrollRoot.dataset.totalSegments || `${(total - 1) * SECTION_SCROLL_UNITS}`,
+					10
+				);
+				const timelineSegments = parseInt(scrollRoot.dataset.timelineSegments || '1', 10);
+				const timelineUnits = parseInt(
+					scrollRoot.dataset.timelineUnits || `${timelineSegments * TIMELINE_SCROLL_UNITS}`,
+					10
+				);
+				const timelineExtraUnits = parseInt(
+					scrollRoot.dataset.timelineExtraUnits || '0',
+					10
+				);
+				const timelineIndex = sections.findIndex((section) => section.id === 'timeline');
+				const timelineLength = timelineIndex >= 0 ? timelineUnits : SECTION_SCROLL_UNITS;
+
+				const exactProgress = self.progress * totalSegments;
+				let mappedProgress = exactProgress / SECTION_SCROLL_UNITS;
+				let timelineProgress = 0;
+
+				if (timelineIndex >= 0) {
+					const timelineStart = timelineIndex * SECTION_SCROLL_UNITS;
+					const timelineEnd = timelineStart + timelineLength;
+
+					if (exactProgress < timelineStart) {
+						// Before timeline: normal section progression
+						mappedProgress = exactProgress / SECTION_SCROLL_UNITS;
+						timelineProgress = 0;
+					} else if (exactProgress >= timelineStart && exactProgress <= timelineEnd) {
+						// During timeline: keep section index at timeline, only update timeline progress
+						timelineProgress = (exactProgress - timelineStart) / timelineLength;
+						// Keep mappedProgress at timelineIndex during the entire timeline scroll
+						// Only start transitioning to next section at the very end
+						const transitionStart = timelineEnd - SECTION_SCROLL_UNITS;
+						if (exactProgress < transitionStart) {
+							mappedProgress = timelineIndex;
+						} else {
+							// Transition to next section in the last SECTION_SCROLL_UNITS of timeline
+							const transitionProgress = (exactProgress - transitionStart) / SECTION_SCROLL_UNITS;
+							mappedProgress = timelineIndex + transitionProgress;
+						}
+					} else {
+						// After timeline: account for extra units and continue normal progression
+						mappedProgress = (exactProgress - timelineExtraUnits) / SECTION_SCROLL_UNITS;
+						timelineProgress = 1;
+					}
+				}
+
+				// Clamp mappedProgress to ensure we can reach all sections
+				const clampedMappedProgress = Math.max(0, Math.min(total - 1, mappedProgress));
+				const clampedTimelineProgress = Math.max(0, Math.min(1, timelineProgress));
+				
+				console.log('[GSAP] progress', self.progress.toFixed(3), 'exact', exactProgress.toFixed(2), 'mapped', clampedMappedProgress.toFixed(2), 'timeline', clampedTimelineProgress.toFixed(3));
+				updateProgress(clampedMappedProgress);
+
+				if (timelineIndex >= 0) {
+					window.dispatchEvent(new CustomEvent('timelineprogress', {
+						detail: { progress: clampedTimelineProgress }
+					}));
+				}
+			},
+		});
+
+		window.addEventListener('resize', () => {
+			scrollDistance = setHeight();
+			ScrollTrigger.refresh();
+		});
+
+		// Nav link handling
+		document.addEventListener('click', (e) => {
+			const target = e.target;
+			const anchor = target && target.closest ? target.closest('a[href^="#"]') : null;
+			if (!anchor) return;
+			e.preventDefault();
+			const href = anchor.getAttribute('href') || '';
+			const targetId = href.replace('#', '');
+			const targetIndex = sections.findIndex((section) => section.id === targetId);
+			if (targetIndex !== -1) {
+				const totalSegments = parseInt(
+					scrollRoot.dataset.totalSegments || `${(total - 1) * SECTION_SCROLL_UNITS}`,
+					10
+				);
+				const timelineSegments = parseInt(scrollRoot.dataset.timelineSegments || '1', 10);
+				const timelineUnits = parseInt(
+					scrollRoot.dataset.timelineUnits || `${timelineSegments * TIMELINE_SCROLL_UNITS}`,
+					10
+				);
+				const timelineIndex = sections.findIndex((section) => section.id === 'timeline');
+				const extraUnits = Math.max(0, timelineUnits - SECTION_SCROLL_UNITS);
+				const step = (scrollDistance - window.innerHeight) / totalSegments;
+				const segment = timelineIndex >= 0 && targetIndex > timelineIndex
+					? targetIndex * SECTION_SCROLL_UNITS + extraUnits
+					: targetIndex * SECTION_SCROLL_UNITS;
+				window.scrollTo({
+					top: step * segment,
+					behavior: 'smooth',
+				});
+			}
+		});
+
+		window.addEventListener('gotosection', (e) => {
+			const detail = e.detail || {};
+			if (typeof detail.index === 'number') {
+				const totalSegments = parseInt(
+					scrollRoot.dataset.totalSegments || `${(total - 1) * SECTION_SCROLL_UNITS}`,
+					10
+				);
+				const timelineSegments = parseInt(scrollRoot.dataset.timelineSegments || '1', 10);
+				const timelineUnits = parseInt(
+					scrollRoot.dataset.timelineUnits || `${timelineSegments * TIMELINE_SCROLL_UNITS}`,
+					10
+				);
+				const timelineIndex = sections.findIndex((section) => section.id === 'timeline');
+				const extraUnits = Math.max(0, timelineUnits - SECTION_SCROLL_UNITS);
+				const step = (scrollDistance - window.innerHeight) / totalSegments;
+				const segment = timelineIndex >= 0 && detail.index > timelineIndex
+					? detail.index * SECTION_SCROLL_UNITS + extraUnits
+					: detail.index * SECTION_SCROLL_UNITS;
+				window.scrollTo({
+					top: step * segment,
+					behavior: 'smooth',
+				});
+			}
+		});
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initScrollExperience);
+	} else {
+		setTimeout(initScrollExperience, 50);
+	}
+</script>
+
+<style>
+	#scroll-root {
+		position: relative;
+	}
+
+	.scroll-stage {
+		position: relative;
+		width: 100%;
+		height: 100vh;
+		overflow: hidden;
+	}
+
+	.scroll-panel {
+		min-height: 100vh;
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	/* Override default section fade for this experience */
+	.scroll-panel .section {
+		opacity: 1 !important;
+		transform: none !important;
+	}
+</style>

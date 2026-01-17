@@ -1,0 +1,67 @@
+---
+import ProjectCard from './ProjectCard.astro';
+import SectionTitle from './SectionTitle.astro';
+
+interface Project {
+	title: string;
+	description: string;
+	technologies: string[];
+	projectUrl?: string;
+	codeUrl?: string;
+}
+
+interface Props {
+	projects?: Project[];
+}
+
+const {
+	projects = [
+		{
+			title: "Project Name",
+			description: "A modern web application built with cutting-edge technologies. Features include real-time updates, responsive design, and seamless user experience.",
+			technologies: ["React", "TypeScript", "Node.js"],
+			projectUrl: "#",
+			codeUrl: "#",
+		},
+		{
+			title: "Project Name",
+			description: "An innovative solution that solves real-world problems with elegant code and intuitive design. Built for scalability and performance.",
+			technologies: ["Next.js", "PostgreSQL", "Tailwind"],
+			projectUrl: "#",
+			codeUrl: "#",
+		},
+		{
+			title: "Project Name",
+			description: "A full-stack application showcasing modern development practices. Includes authentication, database integration, and API development.",
+			technologies: ["Vue.js", "Python", "MongoDB"],
+			projectUrl: "#",
+			codeUrl: "#",
+		},
+	],
+} = Astro.props;
+---
+
+<section id="projects" class="section projects">
+	<div class="container">
+		<SectionTitle number="03" title="Featured Projects" />
+		<div class="projects-grid">
+			{projects.map((project) => (
+				<ProjectCard {...project} />
+			))}
+		</div>
+	</div>
+</section>
+
+<style>
+	.projects-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+		gap: 2rem;
+	}
+
+	@media (max-width: 768px) {
+		.projects-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

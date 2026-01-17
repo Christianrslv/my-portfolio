@@ -1,0 +1,168 @@
+/**
+ * Scroll Reveal Styles
+ * Creates a non-traditional scrolling experience
+ */
+
+/* Prevent default scrolling */
+html {
+	scroll-behavior: auto;
+	overflow: hidden;
+	height: 100%;
+}
+
+body {
+	overflow: hidden;
+	height: 100%;
+	position: fixed;
+	width: 100%;
+}
+
+/* Scroll sections */
+.scroll-section {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100vh;
+	opacity: 0;
+	transform: translateY(50px);
+	pointer-events: none;
+	transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+	            transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+	overflow-y: auto;
+	overflow-x: hidden;
+	-webkit-overflow-scrolling: touch;
+}
+
+.scroll-section.active {
+	opacity: 1;
+	transform: translateY(0);
+	pointer-events: all;
+	z-index: 10;
+}
+
+.scroll-section.prev {
+	opacity: 0;
+	transform: translateY(-30px);
+	z-index: 1;
+}
+
+.scroll-section.next {
+	opacity: 0;
+	transform: translateY(50px);
+	z-index: 1;
+}
+
+/* Smooth scrollbar for sections that need internal scrolling */
+.scroll-section::-webkit-scrollbar {
+	width: 8px;
+}
+
+.scroll-section::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.scroll-section::-webkit-scrollbar-thumb {
+	background: var(--bg-tertiary);
+	border-radius: 4px;
+}
+
+.scroll-section::-webkit-scrollbar-thumb:hover {
+	background: var(--border-color);
+}
+
+/* Section content wrapper */
+.section-content {
+	width: 100%;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+/* Navigation indicator (optional) */
+.scroll-indicator {
+	position: fixed;
+	right: 2rem;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 1000;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.scroll-dot {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--bg-tertiary);
+	border: 2px solid var(--border-color);
+	cursor: pointer;
+	transition: all 0.3s ease;
+	position: relative;
+}
+
+.scroll-dot:hover {
+	background: var(--accent-primary);
+	border-color: var(--accent-primary);
+	transform: scale(1.2);
+}
+
+.scroll-dot.active {
+	background: var(--accent-primary);
+	border-color: var(--accent-primary);
+	box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+.scroll-dot.active::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--accent-primary);
+	border-radius: 50%;
+	opacity: 0.3;
+	animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+	0%, 100% {
+		transform: translate(-50%, -50%) scale(1);
+		opacity: 0.3;
+	}
+	50% {
+		transform: translate(-50%, -50%) scale(1.5);
+		opacity: 0;
+	}
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.scroll-indicator {
+		right: 1rem;
+	}
+	
+	.scroll-dot {
+		width: 10px;
+		height: 10px;
+	}
+}
+
+/* Smooth transitions for section content */
+.scroll-section .section {
+	animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

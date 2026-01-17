@@ -1,0 +1,344 @@
+---
+import SectionTitle from './SectionTitle.astro';
+import { getTimelineEntries, formatTimelineDate, isFutureDate, isCurrentDate } from '../utils/timeline';
+
+const timelineEntries = await getTimelineEntries();
+---
+
+<section id="timeline" class="section timeline">
+	<div class="container">
+		<SectionTitle number="05" title="Journey Timeline" />
+		<div class="timeline-wrapper">
+			<div class="timeline-line"></div>
+			<div class="timeline-entries">
+				{timelineEntries.map((entry, index) => {
+					const EntryContent = entry.Content;
+					return (
+						<div
+							class={`timeline-item ${isCurrentDate(entry.date) ? 'current' : ''} ${isFutureDate(entry.date) ? 'future' : ''}`}
+							data-year={entry.date}
+							data-index={index}
+						>
+							<div class="timeline-marker">
+								<div class="marker-icon">{entry.icon}</div>
+								<div class="marker-dot"></div>
+							</div>
+							<div class="timeline-content">
+								<div class="timeline-header">
+									<span class="timeline-date">{formatTimelineDate(entry.date)}</span>
+									<span class="timeline-category">{entry.category}</span>
+								</div>
+								<h3 class="timeline-title">{entry.title}</h3>
+								<div class="timeline-body">
+									{EntryContent && <EntryContent />}
+								</div>
+							</div>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	</div>
+</section>
+
+<style>
+	.timeline {
+		background: var(--bg-secondary);
+		position: relative;
+		overflow: hidden;
+	}
+
+	.timeline-wrapper {
+		position: relative;
+		padding: 2rem 0;
+	}
+
+	.timeline-line {
+		position: absolute;
+		left: 2rem;
+		top: 0;
+		bottom: 0;
+		width: 3px;
+		background: var(--gradient-primary);
+		opacity: 0.3;
+		transform-origin: top;
+		animation: drawLine 1.5s ease-out;
+	}
+
+	@keyframes drawLine {
+		from {
+			transform: scaleY(0);
+		}
+		to {
+			transform: scaleY(1);
+		}
+	}
+
+	.timeline-entries {
+		position: relative;
+		z-index: 1;
+	}
+
+	.timeline-item {
+		position: relative;
+		padding-left: 6rem;
+		margin-bottom: 4rem;
+		opacity: 0;
+		transform: translateX(-30px);
+		transition: all 0.6s ease;
+	}
+
+	.timeline-item[data-visible='true'] {
+		opacity: 1;
+		transform: translateX(0);
+	}
+
+	.timeline-item.current {
+		z-index: 10;
+	}
+
+	.timeline-item.future {
+		opacity: 0.6;
+	}
+
+	.timeline-marker {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 4rem;
+		height: 4rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.marker-icon {
+		width: 3rem;
+		height: 3rem;
+		background: var(--bg-tertiary);
+		border: 3px solid var(--accent-primary);
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.5rem;
+		position: relative;
+		z-index: 2;
+		transition: all 0.3s ease;
+		box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+	}
+
+	.timeline-item:hover .marker-icon {
+		transform: scale(1.1);
+		box-shadow: 0 6px 25px rgba(99, 102, 241, 0.5);
+		border-color: var(--accent-secondary);
+	}
+
+	.timeline-item.current .marker-icon {
+		background: var(--gradient-primary);
+		animation: pulse 2s ease-in-out infinite;
+	}
+
+	.marker-dot {
+		position: absolute;
+		left: 1.5rem;
+		top: 1.5rem;
+		width: 1rem;
+		height: 1rem;
+		background: var(--accent-primary);
+		border-radius: 50%;
+		z-index: 3;
+	}
+
+	.timeline-content {
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: 12px;
+		padding: 2rem;
+		transition: all 0.3s ease;
+		position: relative;
+	}
+
+	.timeline-content::before {
+		content: '';
+		position: absolute;
+		left: -10px;
+		top: 2rem;
+		width: 0;
+		height: 0;
+		border-top: 10px solid transparent;
+		border-bottom: 10px solid transparent;
+		border-right: 10px solid var(--bg-tertiary);
+	}
+
+	.timeline-item:hover .timeline-content {
+		transform: translateX(10px);
+		border-color: var(--accent-primary);
+		box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+	}
+
+	.timeline-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.timeline-date {
+		font-size: 1.25rem;
+		font-weight: 700;
+		background: var(--gradient-primary);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		font-family: 'Courier New', monospace;
+	}
+
+	.timeline-category {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		background: var(--bg-secondary);
+		padding: 0.25rem 0.75rem;
+		border-radius: 12px;
+		border: 1px solid var(--border-color);
+		text-transform: capitalize;
+	}
+
+	.timeline-title {
+		font-size: 1.75rem;
+		font-weight: 700;
+		margin-bottom: 1rem;
+		color: var(--text-primary);
+	}
+
+	.timeline-body {
+		color: var(--text-secondary);
+		line-height: 1.8;
+	}
+
+	.timeline-body :global(p) {
+		margin-bottom: 1rem;
+	}
+
+	.timeline-body :global(h2),
+	.timeline-body :global(h3) {
+		color: var(--text-primary);
+		margin-top: 1.5rem;
+		margin-bottom: 0.75rem;
+		font-size: 1.25rem;
+	}
+
+	.timeline-body :global(ul),
+	.timeline-body :global(ol) {
+		margin-left: 1.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.timeline-body :global(li) {
+		margin-bottom: 0.5rem;
+	}
+
+	.timeline-placeholder {
+		padding: 1rem;
+		background: var(--bg-secondary);
+		border-radius: 8px;
+		border: 1px dashed var(--border-color);
+		text-align: center;
+		color: var(--text-tertiary);
+	}
+
+	@keyframes pulse {
+		0%, 100% {
+			box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+		}
+		50% {
+			box-shadow: 0 4px 25px rgba(99, 102, 241, 0.6);
+		}
+	}
+
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.timeline-line {
+			left: 1.5rem;
+		}
+
+		.timeline-item {
+			padding-left: 5rem;
+		}
+
+		.timeline-marker {
+			width: 3rem;
+		}
+
+		.marker-icon {
+			width: 2.5rem;
+			height: 2.5rem;
+			font-size: 1.25rem;
+		}
+
+		.marker-dot {
+			left: 1.25rem;
+			top: 1.25rem;
+			width: 0.75rem;
+			height: 0.75rem;
+		}
+
+		.timeline-content {
+			padding: 1.5rem;
+		}
+
+		.timeline-header {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.timeline-item {
+			padding-left: 4rem;
+			margin-bottom: 3rem;
+		}
+
+		.timeline-content::before {
+			display: none;
+		}
+	}
+</style>
+
+<script>
+	// Intersection Observer for timeline animations
+	const timelineObserver = new IntersectionObserver(
+		(entries) => {
+			entries.forEach((entry) => {
+				if (entry.isIntersecting) {
+					entry.target.setAttribute('data-visible', 'true');
+					
+					// Add staggered animation delay
+					const index = parseInt(entry.target.getAttribute('data-index') || '0');
+					entry.target.style.transitionDelay = `${index * 0.1}s`;
+				}
+			});
+		},
+		{
+			threshold: 0.2,
+			rootMargin: '0px 0px -100px 0px',
+		}
+	);
+
+	// Observe all timeline items
+	document.querySelectorAll('.timeline-item').forEach((item) => {
+		timelineObserver.observe(item);
+	});
+
+	// Smooth scroll to timeline items on click
+	document.querySelectorAll('.timeline-item').forEach((item) => {
+		item.addEventListener('click', () => {
+			item.scrollIntoView({
+				behavior: 'smooth',
+				block: 'center',
+			});
+		});
+	});
+</script>

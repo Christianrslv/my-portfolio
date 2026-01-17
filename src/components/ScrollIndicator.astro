@@ -1,0 +1,121 @@
+---
+interface Props {
+	totalSections: number;
+}
+
+const { totalSections } = Astro.props;
+---
+
+<nav class="scroll-indicator" aria-label="Section navigation">
+	{Array.from({ length: totalSections }, (_, i) => (
+		<button
+			class="scroll-dot"
+			data-section-index={i}
+			aria-label={`Go to section ${i + 1}`}
+		></button>
+	))}
+</nav>
+
+<style>
+	.scroll-indicator {
+		position: fixed;
+		right: 2rem;
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 1500;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.scroll-dot {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		background: var(--bg-tertiary);
+		border: 2px solid var(--border-color);
+		cursor: pointer;
+		transition: all 0.3s ease;
+		position: relative;
+		padding: 0;
+		margin: 0;
+	}
+
+	.scroll-dot:hover {
+		background: var(--accent-primary);
+		border-color: var(--accent-primary);
+		transform: scale(1.2);
+	}
+
+	.scroll-dot.active {
+		background: var(--accent-primary);
+		border-color: var(--accent-primary);
+		box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+	}
+
+	.scroll-dot.active::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 20px;
+		height: 20px;
+		border: 2px solid var(--accent-primary);
+		border-radius: 50%;
+		opacity: 0.3;
+		animation: pulse-dot 2s ease-in-out infinite;
+	}
+
+	@keyframes pulse-dot {
+		0%, 100% {
+			transform: translate(-50%, -50%) scale(1);
+			opacity: 0.3;
+		}
+		50% {
+			transform: translate(-50%, -50%) scale(1.5);
+			opacity: 0;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.scroll-indicator {
+			right: 1rem;
+		}
+		
+		.scroll-dot {
+			width: 10px;
+			height: 10px;
+		}
+	}
+</style>
+
+<script>
+	// @ts-nocheck
+	const dots = document.querySelectorAll('.scroll-dot');
+	
+	// Function to go to section (will be called from main script)
+	function goToSectionFromIndicator(index) {
+		window.dispatchEvent(new CustomEvent('gotosection', {
+			detail: { index }
+		}));
+	}
+	
+	dots.forEach((dot, index) => {
+		dot.addEventListener('click', () => {
+			goToSectionFromIndicator(index);
+		});
+	});
+	
+	// Update active dot when section changes
+	function updateActiveDot(activeIndex) {
+		dots.forEach((dot, index) => {
+			dot.classList.toggle('active', index === activeIndex);
+		});
+	}
+	
+	// Listen for section changes
+	window.addEventListener('sectionchange', (e) => {
+		updateActiveDot(e.detail.index);
+	});
+</script>

@@ -1,0 +1,108 @@
+---
+import SectionTitle from './SectionTitle.astro';
+
+interface SkillCategory {
+	title: string;
+	skills: string[];
+}
+
+interface Props {
+	categories?: SkillCategory[];
+}
+
+const {
+	categories = [
+		{
+			title: "Frontend",
+			skills: ["React", "TypeScript", "Next.js", "Astro", "Tailwind CSS", "Vue.js"],
+		},
+		{
+			title: "Backend",
+			skills: ["Node.js", "Python", "PostgreSQL", "MongoDB", "GraphQL", "REST APIs"],
+		},
+		{
+			title: "Tools & Others",
+			skills: ["Git", "Docker", "AWS", "Figma", "CI/CD", "Linux"],
+		},
+	],
+} = Astro.props;
+---
+
+<section id="skills" class="section skills">
+	<div class="container">
+		<SectionTitle number="02" title="Skills & Technologies" />
+		<div class="skills-grid">
+			{categories.map((category) => (
+				<div class="skill-category">
+					<h3 class="category-title">{category.title}</h3>
+					<div class="skill-tags">
+						{category.skills.map((skill) => (
+							<span class="skill-tag">{skill}</span>
+						))}
+					</div>
+				</div>
+			))}
+		</div>
+	</div>
+</section>
+
+<style>
+	.skills {
+		background: var(--bg-secondary);
+	}
+
+	.skills-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 2rem;
+	}
+
+	.skill-category {
+		background: var(--bg-tertiary);
+		padding: 2rem;
+		border-radius: 12px;
+		border: 1px solid var(--border-color);
+		transition: all 0.3s ease;
+	}
+
+	.skill-category:hover {
+		transform: translateY(-5px);
+		border-color: var(--accent-primary);
+		box-shadow: 0 10px 30px rgba(99, 102, 241, 0.1);
+	}
+
+	.category-title {
+		font-size: 1.5rem;
+		margin-bottom: 1.5rem;
+		color: var(--text-primary);
+	}
+
+	.skill-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.skill-tag {
+		padding: 0.5rem 1rem;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+		transition: all 0.3s ease;
+	}
+
+	.skill-tag:hover {
+		background: var(--accent-primary);
+		color: var(--text-primary);
+		border-color: var(--accent-primary);
+		transform: translateY(-2px);
+	}
+
+	@media (max-width: 768px) {
+		.skills-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

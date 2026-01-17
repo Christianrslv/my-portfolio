@@ -1,0 +1,29 @@
+---
+interface Props {
+	text?: string;
+	year?: string;
+}
+
+const { text = "Designed & Built with ❤️", year = "2024" } = Astro.props;
+---
+
+<footer class="footer">
+	<div class="container">
+		<p>{text}</p>
+		<p class="footer-year">© {year}</p>
+	</div>
+</footer>
+
+<style>
+	.footer {
+		padding: 2rem;
+		text-align: center;
+		border-top: 1px solid var(--border-color);
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+	}
+
+	.footer-year {
+		margin-top: 0.5rem;
+	}
+</style>

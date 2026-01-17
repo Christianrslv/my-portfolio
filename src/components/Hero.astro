@@ -1,0 +1,272 @@
+---
+interface Props {
+	greeting?: string;
+	name?: string;
+	role?: string;
+	description?: string;
+	primaryButton?: { text: string; href: string };
+	secondaryButton?: { text: string; href: string };
+}
+
+const {
+	greeting = "Hi, I'm",
+	name = "Your Name",
+	role = "Full Stack Developer",
+	description = "I create beautiful, functional, and user-centered digital experiences. Passionate about clean code and innovative solutions.",
+	primaryButton = { text: "View Work", href: "#projects" },
+	secondaryButton = { text: "Get In Touch", href: "#contact" },
+} = Astro.props;
+---
+
+<section id="home" class="hero">
+	<div class="hero-content">
+		<div class="hero-text">
+			<h1 class="hero-title">
+				<span class="greeting">{greeting}</span>
+				<span class="name">{name}</span>
+				<span class="role">{role}</span>
+			</h1>
+			<p class="hero-description">{description}</p>
+			<div class="hero-buttons">
+				<a href={primaryButton.href} class="btn btn-primary">{primaryButton.text}</a>
+				<a href={secondaryButton.href} class="btn btn-secondary">{secondaryButton.text}</a>
+			</div>
+		</div>
+		<div class="hero-visual">
+			<div class="gradient-orb orb-1"></div>
+			<div class="gradient-orb orb-2"></div>
+			<div class="gradient-orb orb-3"></div>
+		</div>
+	</div>
+	<div class="scroll-indicator">
+		<span>Scroll</span>
+		<div class="scroll-line"></div>
+	</div>
+</section>
+
+<style>
+	.hero {
+		min-height: 100vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+		padding: 8rem 2rem 4rem;
+		overflow: hidden;
+	}
+
+	.hero-content {
+		max-width: 1200px;
+		width: 100%;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 4rem;
+		align-items: center;
+		z-index: 1;
+	}
+
+	.hero-text {
+		animation: fadeInUp 0.8s ease;
+	}
+
+	.hero-title {
+		font-size: clamp(2.5rem, 5vw, 4rem);
+		font-weight: 700;
+		line-height: 1.2;
+		margin-bottom: 1.5rem;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.greeting {
+		color: var(--text-secondary);
+		font-size: 1.5rem;
+		font-weight: 400;
+		margin-bottom: 0.5rem;
+		animation: fadeIn 0.6s ease;
+	}
+
+	.name {
+		background: var(--gradient-primary);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		animation: fadeIn 0.8s ease 0.2s both;
+	}
+
+	.role {
+		color: var(--text-secondary);
+		font-size: 1.5rem;
+		font-weight: 400;
+		margin-top: 0.5rem;
+		animation: fadeIn 1s ease 0.4s both;
+	}
+
+	.hero-description {
+		font-size: 1.125rem;
+		color: var(--text-secondary);
+		margin-bottom: 2rem;
+		max-width: 600px;
+		line-height: 1.8;
+		animation: fadeIn 1.2s ease 0.6s both;
+	}
+
+	.hero-buttons {
+		display: flex;
+		gap: 1rem;
+		animation: fadeIn 1.4s ease 0.8s both;
+	}
+
+	.btn {
+		padding: 0.875rem 2rem;
+		border-radius: 8px;
+		text-decoration: none;
+		font-weight: 600;
+		transition: all 0.3s ease;
+		display: inline-block;
+		border: 1px solid transparent;
+	}
+
+	.btn-primary {
+		background: var(--gradient-primary);
+		color: var(--text-primary);
+		box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+	}
+
+	.btn-primary:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+	}
+
+	.btn-secondary {
+		background: transparent;
+		color: var(--text-primary);
+		border-color: var(--border-color);
+	}
+
+	.btn-secondary:hover {
+		background: var(--bg-tertiary);
+		border-color: var(--accent-primary);
+	}
+
+	.hero-visual {
+		position: relative;
+		width: 100%;
+		height: 500px;
+		animation: fadeIn 1s ease 0.4s both;
+	}
+
+	.gradient-orb {
+		position: absolute;
+		border-radius: 50%;
+		filter: blur(80px);
+		opacity: 0.6;
+		animation: float 6s ease-in-out infinite;
+	}
+
+	.orb-1 {
+		width: 300px;
+		height: 300px;
+		background: var(--accent-primary);
+		top: 10%;
+		left: 10%;
+		animation-delay: 0s;
+	}
+
+	.orb-2 {
+		width: 250px;
+		height: 250px;
+		background: var(--accent-secondary);
+		top: 50%;
+		right: 10%;
+		animation-delay: 2s;
+	}
+
+	.orb-3 {
+		width: 200px;
+		height: 200px;
+		background: var(--accent-tertiary);
+		bottom: 10%;
+		left: 50%;
+		animation-delay: 4s;
+	}
+
+	.scroll-indicator {
+		position: absolute;
+		bottom: 2rem;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+		animation: fadeIn 1.6s ease 1s both;
+	}
+
+	.scroll-line {
+		width: 2px;
+		height: 40px;
+		background: var(--gradient-primary);
+		animation: scrollDown 2s ease-in-out infinite;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	@keyframes fadeInUp {
+		from {
+			opacity: 0;
+			transform: translateY(30px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	@keyframes float {
+		0%, 100% {
+			transform: translateY(0) translateX(0);
+		}
+		33% {
+			transform: translateY(-30px) translateX(20px);
+		}
+		66% {
+			transform: translateY(30px) translateX(-20px);
+		}
+	}
+
+	@keyframes scrollDown {
+		0% {
+			transform: translateY(0);
+			opacity: 1;
+		}
+		100% {
+			transform: translateY(20px);
+			opacity: 0;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.hero-content {
+			grid-template-columns: 1fr;
+			text-align: center;
+		}
+
+		.hero-visual {
+			height: 300px;
+		}
+
+		.hero-buttons {
+			justify-content: center;
+		}
+	}
+</style>

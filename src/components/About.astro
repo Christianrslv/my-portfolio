@@ -1,0 +1,139 @@
+---
+import SectionTitle from './SectionTitle.astro';
+
+interface Props {
+	paragraphs?: string[];
+	stats?: Array<{ number: string; label: string }>;
+	showImage?: boolean;
+}
+
+const {
+	paragraphs = [
+		"I'm a passionate developer with a love for creating digital experiences that make a difference. With expertise in modern web technologies, I bring ideas to life through clean code and thoughtful design.",
+		"When I'm not coding, you can find me exploring new technologies, contributing to open-source projects, or sharing knowledge with the developer community.",
+	],
+	stats = [
+		{ number: "50+", label: "Projects" },
+		{ number: "5+", label: "Years Experience" },
+		{ number: "100+", label: "Happy Clients" },
+	],
+	showImage = true,
+} = Astro.props;
+---
+
+<section id="about" class="section about">
+	<div class="container">
+		<SectionTitle number="01" title="About Me" />
+		<div class="about-content">
+			<div class="about-text">
+				{paragraphs.map((paragraph) => (
+					<p>{paragraph}</p>
+				))}
+				<div class="about-stats">
+					{stats.map((stat) => (
+						<div class="stat">
+							<div class="stat-number">{stat.number}</div>
+							<div class="stat-label">{stat.label}</div>
+						</div>
+					))}
+				</div>
+			</div>
+			{showImage && (
+				<div class="about-image">
+					<div class="image-placeholder">
+						<div class="image-gradient"></div>
+					</div>
+				</div>
+			)}
+		</div>
+	</div>
+</section>
+
+<style>
+	.about-content {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 4rem;
+		align-items: center;
+	}
+
+	.about-text p {
+		font-size: 1.125rem;
+		color: var(--text-secondary);
+		margin-bottom: 1.5rem;
+		line-height: 1.8;
+	}
+
+	.about-stats {
+		display: flex;
+		gap: 3rem;
+		margin-top: 2rem;
+	}
+
+	.stat {
+		text-align: center;
+	}
+
+	.stat-number {
+		font-size: 2.5rem;
+		font-weight: 700;
+		background: var(--gradient-primary);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	.stat-label {
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+		margin-top: 0.5rem;
+	}
+
+	.about-image {
+		position: relative;
+	}
+
+	.image-placeholder {
+		width: 100%;
+		aspect-ratio: 1;
+		border-radius: 12px;
+		overflow: hidden;
+		position: relative;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+	}
+
+	.image-gradient {
+		width: 100%;
+		height: 100%;
+		background: var(--gradient-primary);
+		opacity: 0.2;
+		animation: pulse 3s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 0.2;
+		}
+		50% {
+			opacity: 0.3;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.about-content {
+			grid-template-columns: 1fr;
+		}
+
+		.about-stats {
+			justify-content: center;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.about-stats {
+			flex-direction: column;
+			gap: 1.5rem;
+		}
+	}
+</style>
