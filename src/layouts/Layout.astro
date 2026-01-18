@@ -13,7 +13,7 @@ import '../styles/global.css';
 		<title>Portfolio</title>
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@300;400&family=Inter:wght@200;300;400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
 	</head>
 	<body>
 		<slot />
@@ -35,33 +35,33 @@ import '../styles/global.css';
 	}
 
 	:root {
-		--bg-primary: #f7f7fb;
-		--bg-secondary: #ffffff;
-		--bg-tertiary: #f1f1f6;
-		--text-primary: #0f172a;
-		--text-secondary: #475569;
-		--text-tertiary: #94a3b8;
-		--accent-primary: #4f46e5;
-		--accent-secondary: #7c3aed;
-		--accent-tertiary: #ec4899;
-		--border-color: #e2e8f0;
-		--gradient-primary: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
-		--gradient-secondary: linear-gradient(135deg, #ffffff 0%, #f1f1f6 100%);
+		/* Light Theme */
+		--bg-primary: #FAFAFA;
+		--bg-secondary: #FFFFFF;
+		--bg-tertiary: #F1F5F9;
+		--text-primary: #171717;
+		--text-secondary: #525252;
+		--text-tertiary: #94A3B8;
+		--accent-primary: #64748B;
+		--accent-hover: #475569;
+		--border-color: #E5E5E5;
+		--code-bg: #F1F5F9;
+		--code-text: #171717;
 	}
 
 	html.dark {
-		--bg-primary: #0a0a0a;
-		--bg-secondary: #111111;
-		--bg-tertiary: #1a1a1a;
-		--text-primary: #ffffff;
-		--text-secondary: #a0a0a0;
-		--text-tertiary: #666666;
-		--accent-primary: #6366f1;
-		--accent-secondary: #8b5cf6;
-		--accent-tertiary: #ec4899;
-		--border-color: #252525;
-		--gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-		--gradient-secondary: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+		/* Dark Theme */
+		--bg-primary: #0F172A;
+		--bg-secondary: #0F172A;
+		--bg-tertiary: #1E293B;
+		--text-primary: #F8FAFC;
+		--text-secondary: #94A3B8;
+		--text-tertiary: #64748B;
+		--accent-primary: #60A5FA;
+		--accent-hover: #3B82F6;
+		--border-color: #1E293B;
+		--code-bg: #1E293B;
+		--code-text: #F8FAFC;
 	}
 
 	html {
@@ -70,11 +70,62 @@ import '../styles/global.css';
 
 	body {
 		font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+		font-weight: 300;
 		background: var(--bg-primary);
 		color: var(--text-primary);
-		line-height: 1.6;
+		line-height: 1.8;
+		letter-spacing: 0.01em;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
+	}
+
+	/* Typography hierarchy - refined and airy */
+	h1, h2, h3, h4, h5, h6 {
+		font-family: 'Libre Baskerville', serif;
+		font-weight: 300;
+		color: var(--text-primary);
+		line-height: 1.4;
+		letter-spacing: -0.02em;
+		margin-bottom: 1.5rem;
+	}
+
+	h1 {
+		font-size: clamp(2.5rem, 5vw, 4rem);
+		font-weight: 300;
+	}
+
+	h2 {
+		font-size: clamp(2rem, 4vw, 3rem);
+		font-weight: 300;
+	}
+
+	h3 {
+		font-size: clamp(1.5rem, 3vw, 2rem);
+		font-weight: 400;
+	}
+
+	/* Code styles */
+	code, pre {
+		font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+		font-weight: 400;
+	}
+
+	pre {
+		background: var(--code-bg);
+		color: var(--code-text);
+		padding: 1.5rem;
+		border-radius: 8px;
+		border: 1px solid var(--border-color);
+		overflow-x: auto;
+		line-height: 1.6;
+	}
+
+	code:not(pre code) {
+		background: var(--code-bg);
+		color: var(--code-text);
+		padding: 0.2em 0.4em;
+		border-radius: 4px;
+		font-size: 0.9em;
 	}
 
 	/* Smooth scroll animations */
@@ -87,7 +138,8 @@ import '../styles/global.css';
 	/* Selection styling */
 	::selection {
 		background: var(--accent-primary);
-		color: var(--text-primary);
+		color: var(--bg-primary);
+		opacity: 0.2;
 	}
 
 	/* Scrollbar styling */
@@ -108,39 +160,41 @@ import '../styles/global.css';
 		background: var(--border-color);
 	}
 
-	/* Section base styles */
+	/* Section base styles - generous white space */
 	.section {
-		padding: 6rem 2rem;
+		padding: 8rem 2rem;
 		position: relative;
 		opacity: 1;
 		transform: none;
 	}
 
 	.container {
-		max-width: 1200px;
+		max-width: 1000px;
 		margin: 0 auto;
 	}
 
-	/* Button styles */
+	/* Button styles - subtle and elegant */
 	.btn {
-		padding: 0.875rem 2rem;
-		border-radius: 8px;
+		padding: 0.75rem 2rem;
+		border-radius: 4px;
 		text-decoration: none;
-		font-weight: 600;
-		transition: all 0.3s ease;
+		font-weight: 300;
+		transition: all 0.2s ease;
 		display: inline-block;
 		border: 1px solid transparent;
+		letter-spacing: 0.02em;
 	}
 
 	.btn-primary {
-		background: var(--gradient-primary);
-		color: var(--text-primary);
-		box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+		background: var(--accent-primary);
+		color: var(--bg-primary);
+		border-color: var(--accent-primary);
 	}
 
 	.btn-primary:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+		background: var(--accent-hover);
+		border-color: var(--accent-hover);
+		transform: translateY(-1px);
 	}
 
 	.btn-secondary {
@@ -152,6 +206,7 @@ import '../styles/global.css';
 	.btn-secondary:hover {
 		background: var(--bg-tertiary);
 		border-color: var(--accent-primary);
+		color: var(--accent-primary);
 	}
 
 	.btn-large {
@@ -163,13 +218,13 @@ import '../styles/global.css';
 	/* Responsive utilities */
 	@media (max-width: 768px) {
 		.section {
-			padding: 4rem 1rem;
+			padding: 6rem 1.5rem;
 		}
 	}
 
 	@media (max-width: 480px) {
 		.section {
-			padding: 4rem 1rem;
+			padding: 5rem 1rem;
 		}
 	}
 </style>

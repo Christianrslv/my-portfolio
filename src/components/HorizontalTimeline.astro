@@ -91,11 +91,10 @@ const timelineEntries = await getTimelineEntries();
 		left: 0;
 		top: 50%;
 		transform: translateY(-50%);
-		height: 4px;
+		height: 2px;
 		width: 0%;
-		background: var(--gradient-primary);
+		background: var(--accent-primary);
 		transition: width 0.1s linear;
-		box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
 		z-index: 1;
 	}
 
@@ -257,8 +256,8 @@ const timelineEntries = await getTimelineEntries();
 	.content-date {
 		font-size: 0.875rem;
 		color: var(--accent-primary);
-		font-weight: 600;
-		font-family: 'Courier New', monospace;
+		font-weight: 400;
+		font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
 	}
 
 	.content-title {

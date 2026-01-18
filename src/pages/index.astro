@@ -395,10 +395,15 @@ import { portfolioConfig } from '../data/config';
 		width: 60px;
 		height: 60px;
 		border-radius: 50%;
-		background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
-		box-shadow: 0 0 30px rgba(99, 102, 241, 0.6), 0 0 60px rgba(139, 92, 246, 0.4);
+		background: var(--accent-primary);
+		box-shadow: 0 0 20px rgba(100, 116, 139, 0.3);
 		z-index: 9999;
 		pointer-events: none;
 		transform: translate(0, 0);
+		opacity: 0.8;
+	}
+
+	html.dark .scroll-progress-ball {
+		box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
 	}
 </style>
