@@ -5,6 +5,8 @@ interface Props {
 	paragraphs?: string[];
 	stats?: Array<{ number: string; label: string }>;
 	showImage?: boolean;
+	imageUrl?: string;
+	imageAlt?: string;
 }
 
 const {
@@ -18,6 +20,8 @@ const {
 		{ number: "100+", label: "Happy Clients" },
 	],
 	showImage = true,
+	imageUrl,
+	imageAlt = "Profile photo",
 } = Astro.props;
 ---
 
@@ -40,9 +44,21 @@ const {
 			</div>
 			{showImage && (
 				<div class="about-image">
-					<div class="image-placeholder">
-						<div class="image-gradient"></div>
-					</div>
+					{imageUrl ? (
+						<div class="image-wrapper">
+							<img 
+								src={imageUrl} 
+								alt={imageAlt}
+								class="profile-image"
+								onerror="console.error('Failed to load image:', this.src)"
+								onload="console.log('Image loaded successfully:', this.src)"
+							/>
+						</div>
+					) : (
+						<div class="image-placeholder">
+							<div class="image-gradient"></div>
+						</div>
+					)}
 				</div>
 			)}
 		</div>
@@ -54,7 +70,19 @@ const {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 4rem;
-		align-items: center;
+		align-items: flex-start;
+	}
+
+	@media (min-width: 1536px) {
+		.about-content {
+			gap: 6rem;
+		}
+	}
+
+	@media (max-width: 1024px) {
+		.about-content {
+			gap: 3rem;
+		}
 	}
 
 	.about-text p {
@@ -89,6 +117,29 @@ const {
 
 	.about-image {
 		position: relative;
+		width: 100%;
+		aspect-ratio: 1;
+	}
+
+	.image-wrapper {
+		width: 100%;
+		height: 100%;
+		border-radius: 12px;
+		overflow: hidden;
+		border: 1px solid var(--border-color);
+		background: var(--bg-tertiary);
+	}
+
+	.profile-image {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
+	/* Debug: Show if image fails to load */
+	.profile-image:not([src]) {
+		display: none;
 	}
 
 	.image-placeholder {

@@ -6,6 +6,7 @@ interface Props {
 	description?: string;
 	primaryButton?: { text: string; href: string };
 	secondaryButton?: { text: string; href: string };
+	backgroundImage?: string;
 }
 
 const {
@@ -15,6 +16,7 @@ const {
 	description = "I create beautiful, functional, and user-centered digital experiences. Passionate about clean code and innovative solutions.",
 	primaryButton = { text: "View Work", href: "#projects" },
 	secondaryButton = { text: "Get In Touch", href: "#contact" },
+	backgroundImage,
 } = Astro.props;
 ---
 
@@ -48,21 +50,58 @@ const {
 	.hero {
 		min-height: 100vh;
 		display: flex;
-		align-items: center;
-		justify-content: center;
+		align-items: flex-start;
+		justify-content: flex-start;
 		position: relative;
-		padding: 10rem 2rem 6rem;
+		padding: 10rem 3rem 6rem;
 		overflow: hidden;
+		z-index: 1;
+	}
+
+	@media (max-width: 1024px) {
+		.hero {
+			padding: 10rem 2rem 6rem;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.hero {
+			padding: 8rem 1.5rem 4rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.hero {
+			padding: 6rem 1rem 4rem;
+		}
 	}
 
 	.hero-content {
-		max-width: 1000px;
 		width: 100%;
+		padding: 0 3rem;
 		display: grid;
 		grid-template-columns: 1fr;
 		gap: 4rem;
-		align-items: center;
+		align-items: flex-start;
 		z-index: 1;
+	}
+
+	@media (max-width: 1024px) {
+		.hero-content {
+			padding: 0 2rem;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.hero-content {
+			padding: 0 1.5rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.hero-content {
+			padding: 0 1rem;
+		}
 	}
 
 	.hero-text {

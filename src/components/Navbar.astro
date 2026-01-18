@@ -47,12 +47,29 @@ const { logo = 'Portfolio', links = [
 	}
 
 	.nav-container {
-		max-width: 1000px;
-		margin: 0 auto;
-		padding: 1.5rem 2rem;
+		width: 100%;
+		padding: 1.5rem 3rem;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+	}
+
+	@media (max-width: 1024px) {
+		.nav-container {
+			padding: 1.5rem 2rem;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.nav-container {
+			padding: 1rem 1.5rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.nav-container {
+			padding: 1rem;
+		}
 	}
 
 	.logo {

@@ -10,51 +10,118 @@ import Contact from '../components/Contact.astro';
 import Footer from '../components/Footer.astro';
 import ScrollIndicator from '../components/ScrollIndicator.astro';
 import { portfolioConfig } from '../data/config';
+import { getPortfolioContent } from '../utils/content';
+import { getPortfolioContentSimple } from '../utils/content-simple';
+import { getCollection } from 'astro:content';
+
+// Try multiple methods to load content
+let content = null;
+
+// Method 1: Try Content Collections
+try {
+	console.log('[Index] Attempting Content Collections...');
+	const portfolioEntries = await getCollection('portfolio');
+	console.log('[Index] Content Collections - entries:', portfolioEntries.length);
+	
+	if (portfolioEntries.length > 0) {
+		content = await getPortfolioContent();
+		console.log('[Index] Content Collections loaded:', !!content);
+	}
+} catch (error) {
+	console.warn('[Index] Content Collections failed:', error);
+}
+
+// Method 2: Fallback to simple glob loader
+if (!content) {
+	try {
+		console.log('[Index] Trying simple glob loader...');
+		content = await getPortfolioContentSimple();
+		console.log('[Index] Simple loader result:', !!content);
+	} catch (error) {
+		console.warn('[Index] Simple loader failed:', error);
+	}
+}
+
+// Debug logging
+console.log('[Index] Content loaded:', !!content);
+if (content) {
+	console.log('[Index] Using Markdown content');
+	console.log('[Index] Hero from content:', content.hero);
+} else {
+	console.log('[Index] Using config.ts fallback');
+}
+
+// Merge content with config fallback
+const config = {
+	nav: portfolioConfig.nav,
+	hero: content?.hero || portfolioConfig.hero,
+	about: {
+		...portfolioConfig.about,
+		...(content?.about || {}),
+	},
+	skills: content?.skills || portfolioConfig.skills,
+	projects: content?.projects || portfolioConfig.projects,
+	contact: content?.contact || portfolioConfig.contact,
+	footer: portfolioConfig.footer,
+};
+
+console.log('[Index] Final hero name:', config.hero.name);
+console.log('[Index] Final config.hero:', config.hero);
+console.log('[Index] About imageUrl:', config.about.imageUrl);
+console.log('[Index] About showImage:', config.about.showImage);
 ---
 
 <Layout>
-	<Navbar logo={portfolioConfig.nav.logo} links={portfolioConfig.nav.links} />
+	<Navbar logo={config.nav?.logo || portfolioConfig.nav.logo} links={config.nav?.links || portfolioConfig.nav.links} />
 
 	<ScrollIndicator totalSections={6} />
 
 	<div id="scroll-root" class="relative">
 		<!-- Test animated ball for scroll progress -->
 		<div id="scroll-progress-ball" class="scroll-progress-ball"></div>
-		<div class="scroll-stage relative h-screen w-full overflow-hidden">
+		<div 
+			id="scroll-stage-bg"
+			class="scroll-stage relative h-screen w-full overflow-hidden"
+			data-background-image={config.hero.backgroundImage || ''}
+			style={config.hero.backgroundImage ? `background-image: url('${config.hero.backgroundImage}'); background-size: cover; background-position: right center; background-repeat: no-repeat;` : ''}
+		>
+			{config.hero.backgroundImage && <div class="hero-background-overlay"></div>}
 			<section id="home" class="scroll-panel flex min-h-screen w-full items-center justify-center">
 				<Hero
-					greeting={portfolioConfig.hero.greeting}
-					name={portfolioConfig.hero.name}
-					role={portfolioConfig.hero.role}
-					description={portfolioConfig.hero.description}
-					primaryButton={portfolioConfig.hero.primaryButton}
-					secondaryButton={portfolioConfig.hero.secondaryButton}
+					greeting={config.hero.greeting}
+					name={config.hero.name}
+					role={config.hero.role}
+					description={config.hero.description}
+					primaryButton={config.hero.primaryButton}
+					secondaryButton={config.hero.secondaryButton}
 				/>
 			</section>
 
 			<section id="about" class="scroll-panel flex min-h-screen w-full items-center justify-center">
 				<About
-					paragraphs={portfolioConfig.about.paragraphs}
+					paragraphs={config.about.paragraphs}
 					stats={portfolioConfig.about.stats}
-					showImage={portfolioConfig.about.showImage}
+					showImage={config.about.showImage}
+					imageUrl={config.about.imageUrl}
+					imageAlt={config.about.imageAlt}
 				/>
 			</section>
 
 			<section id="skills" class="scroll-panel flex min-h-screen w-full items-center justify-center">
-				<Skills categories={portfolioConfig.skills.categories} />
+				<Skills categories={config.skills.categories} />
 			</section>
 
 			<section id="projects" class="scroll-panel flex min-h-screen w-full items-center justify-center">
-				<Projects projects={portfolioConfig.projects} />
+				<Projects projects={config.projects} />
 			</section>
 
 		<HorizontalTimeline />
 
 			<section id="contact" class="scroll-panel flex min-h-screen w-full items-center justify-center">
 				<Contact
-					description={portfolioConfig.contact.description}
-					email={portfolioConfig.contact.email}
-					socialLinks={portfolioConfig.contact.socialLinks}
+					description={config.contact.description}
+					email={config.contact.email}
+					socialLinks={config.contact.socialLinks}
 				/>
 				<Footer text={portfolioConfig.footer.text} year={portfolioConfig.footer.year} />
 			</section>
@@ -69,7 +136,7 @@ import { portfolioConfig } from '../data/config';
 
 	gsap.registerPlugin(ScrollTrigger);
 
-	function initScrollExperience() {
+		function initScrollExperience() {
 		const scrollRoot = document.querySelector('#scroll-root');
 		const scrollStage = document.querySelector('.scroll-stage');
 		const sections = Array.from(document.querySelectorAll('.scroll-panel'));
@@ -84,6 +151,17 @@ import { portfolioConfig } from '../data/config';
 		const SECTION_SCROLL_UNITS = 0.80; // Reduced for faster scrolling
 		const TIMELINE_SCROLL_UNITS = 0.75; // Reduced for faster timeline progression
 		const SECTION_TOLERANCE = 0.25; // Dead zone at start/end of each section (0-1 range)
+		
+		// Focal points for background image animation
+		// Format: { x: percentage, y: percentage } where 0% is top/left, 100% is bottom/right
+		const focalPoints = [
+			{ x: 100, y: 50 },  // Section 0 (home): right center
+			{ x: 80, y: 30 },   // Section 1 (about): shift left and up
+			{ x: 60, y: 50 },   // Section 2 (skills): more left
+			{ x: 40, y: 70 },   // Section 3 (projects): left and down
+			{ x: 50, y: 50 },   // Section 4 (timeline): center
+			{ x: 30, y: 50 },   // Section 5 (contact): left center
+		];
 		const setHeight = () => {
 			const timelineSection = sections.find((section) => section.id === 'timeline');
 			const timelineEntries = timelineSection
@@ -261,6 +339,30 @@ import { portfolioConfig } from '../data/config';
 				const clampedMappedProgress = Math.max(0, Math.min(total - 1, mappedProgress));
 				const clampedTimelineProgress = Math.max(0, Math.min(1, timelineProgress));
 				
+				// Animate background focal point based on scroll progress
+				const backgroundStage = document.getElementById('scroll-stage-bg');
+				const hasBackground = backgroundStage?.dataset.backgroundImage;
+				if (backgroundStage && hasBackground) {
+					const currentSection = Math.floor(clampedMappedProgress);
+					const nextSection = Math.min(total - 1, currentSection + 1);
+					const sectionProgress = clampedMappedProgress - currentSection;
+					
+					// Get focal points for current and next section
+					const currentFocal = focalPoints[currentSection] || focalPoints[0];
+					const nextFocal = focalPoints[nextSection] || currentFocal;
+					
+					// Apply smooth easing for natural movement
+					const easedProgress = sectionProgress < 0.5 
+						? 2 * sectionProgress * sectionProgress 
+						: 1 - Math.pow(-2 * sectionProgress + 2, 2) / 2;
+					
+					// Interpolate between focal points with easing
+					const finalX = currentFocal.x + (nextFocal.x - currentFocal.x) * easedProgress;
+					const finalY = currentFocal.y + (nextFocal.y - currentFocal.y) * easedProgress;
+					
+					backgroundStage.style.backgroundPosition = `${finalX}% ${finalY}%`;
+				}
+				
 				console.log('[GSAP] progress', self.progress.toFixed(3), 'exact', exactProgress.toFixed(2), 'mapped', clampedMappedProgress.toFixed(2), 'timeline', clampedTimelineProgress.toFixed(3));
 				updateProgress(clampedMappedProgress);
 
@@ -371,14 +473,30 @@ import { portfolioConfig } from '../data/config';
 		width: 100%;
 		height: 100vh;
 		overflow: hidden;
+		transition: background-position 0.1s linear;
+	}
+
+	.hero-background-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(250, 250, 250, 0.6);
+		z-index: 0;
+		pointer-events: none;
+	}
+
+	html.dark .hero-background-overlay {
+		background: rgba(15, 23, 42, 0.6);
 	}
 
 	.scroll-panel {
 		min-height: 100vh;
 		width: 100%;
 		display: flex;
-		align-items: center;
-		justify-content: center;
+		align-items: flex-start;
+		justify-content: flex-start;
 	}
 
 	/* Override default section fade for this experience */

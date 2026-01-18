@@ -169,8 +169,26 @@ import '../styles/global.css';
 	}
 
 	.container {
-		max-width: 1000px;
-		margin: 0 auto;
+		width: 100%;
+		padding: 0 3rem;
+	}
+
+	@media (max-width: 1024px) {
+		.container {
+			padding: 0 2rem;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.container {
+			padding: 0 1.5rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.container {
+			padding: 0 1rem;
+		}
 	}
 
 	/* Button styles - subtle and elegant */
@@ -216,6 +234,12 @@ import '../styles/global.css';
 
 
 	/* Responsive utilities */
+	@media (max-width: 1024px) {
+		.section {
+			padding: 6rem 2rem;
+		}
+	}
+
 	@media (max-width: 768px) {
 		.section {
 			padding: 6rem 1.5rem;
