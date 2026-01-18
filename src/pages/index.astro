@@ -83,8 +83,14 @@ console.log('[Index] About showImage:', config.about.showImage);
 			id="scroll-stage-bg"
 			class="scroll-stage relative h-screen w-full overflow-hidden"
 			data-background-image={config.hero.backgroundImage || ''}
-			style={config.hero.backgroundImage ? `background-image: url('${config.hero.backgroundImage}'); background-size: cover; background-position: right center; background-repeat: no-repeat;` : ''}
 		>
+			<div class="base-background"></div>
+			{config.hero.backgroundImage && (
+				<div 
+					class="background-image-layer"
+					style={`background-image: url('${config.hero.backgroundImage}');`}
+				></div>
+			)}
 			{config.hero.backgroundImage && <div class="hero-background-overlay"></div>}
 			<section id="home" class="scroll-panel flex min-h-screen w-full items-center justify-center">
 				<Hero
@@ -152,16 +158,9 @@ console.log('[Index] About showImage:', config.about.showImage);
 		const TIMELINE_SCROLL_UNITS = 0.75; // Reduced for faster timeline progression
 		const SECTION_TOLERANCE = 0.25; // Dead zone at start/end of each section (0-1 range)
 		
-		// Focal points for background image animation
-		// Format: { x: percentage, y: percentage } where 0% is top/left, 100% is bottom/right
-		const focalPoints = [
-			{ x: 100, y: 50 },  // Section 0 (home): right center
-			{ x: 80, y: 30 },   // Section 1 (about): shift left and up
-			{ x: 60, y: 50 },   // Section 2 (skills): more left
-			{ x: 40, y: 70 },   // Section 3 (projects): left and down
-			{ x: 50, y: 50 },   // Section 4 (timeline): center
-			{ x: 30, y: 50 },   // Section 5 (contact): left center
-		];
+		
+		// Section where background image should be hidden (2 = Skills and beyond)
+		const BACKGROUND_IMAGE_END_SECTION = 2;
 		const setHeight = () => {
 			const timelineSection = sections.find((section) => section.id === 'timeline');
 			const timelineEntries = timelineSection
@@ -339,28 +338,51 @@ console.log('[Index] About showImage:', config.about.showImage);
 				const clampedMappedProgress = Math.max(0, Math.min(total - 1, mappedProgress));
 				const clampedTimelineProgress = Math.max(0, Math.min(1, timelineProgress));
 				
-				// Animate background focal point based on scroll progress
+				// Animate background focal point and handle image visibility
 				const backgroundStage = document.getElementById('scroll-stage-bg');
+				const backgroundImageLayer = backgroundStage?.querySelector('.background-image-layer');
 				const hasBackground = backgroundStage?.dataset.backgroundImage;
-				if (backgroundStage && hasBackground) {
+				if (backgroundImageLayer && hasBackground) {
 					const currentSection = Math.floor(clampedMappedProgress);
-					const nextSection = Math.min(total - 1, currentSection + 1);
 					const sectionProgress = clampedMappedProgress - currentSection;
+					// Keep the image aligned to right/bottom with cover sizing.
+					// Cropping is allowed on top/left to preserve aspect ratio.
+					backgroundImageLayer.style.backgroundPosition = 'right bottom';
 					
-					// Get focal points for current and next section
-					const currentFocal = focalPoints[currentSection] || focalPoints[0];
-					const nextFocal = focalPoints[nextSection] || currentFocal;
+					// Zoom behavior: completes by 70% through section 0 (before section 1 content appears)
+					const zoomStart = 1.0;
+					const zoomEnd = 1.5;
+					const zoomProgress = currentSection === 0
+						? Math.min(1, sectionProgress / 0.7) // Complete zoom by 70% of section 0
+						: 1;
+					const zoomScale = zoomStart + (zoomEnd - zoomStart) * zoomProgress;
+
+					// Exit animation: image slides left and fades out during section 1
+					// Starts immediately at section 1, completes by 60% (before section 2 content appears)
+					const exitProgress = currentSection === 1
+						? Math.min(1, sectionProgress / 0.6)
+						: (currentSection >= 2 ? 1 : 0);
 					
-					// Apply smooth easing for natural movement
-					const easedProgress = sectionProgress < 0.5 
-						? 2 * sectionProgress * sectionProgress 
-						: 1 - Math.pow(-2 * sectionProgress + 2, 2) / 2;
-					
-					// Interpolate between focal points with easing
-					const finalX = currentFocal.x + (nextFocal.x - currentFocal.x) * easedProgress;
-					const finalY = currentFocal.y + (nextFocal.y - currentFocal.y) * easedProgress;
-					
-					backgroundStage.style.backgroundPosition = `${finalX}% ${finalY}%`;
+					// Image slides left as it exits - always apply based on exit progress
+					// No rightward movement ever - exitTranslate is always 0 or negative
+					const exitTranslate = exitProgress * -40; // vw, negative = left
+
+					backgroundImageLayer.style.transform = `translateX(${exitTranslate}vw) scale(${zoomScale})`;
+
+					// Handle opacity based on section
+					if (currentSection >= BACKGROUND_IMAGE_END_SECTION) {
+						// Completely hidden starting at section 2 (Skills)
+						backgroundImageLayer.style.opacity = '0';
+						backgroundImageLayer.style.visibility = 'hidden';
+					} else if (currentSection === 1) {
+						// Fade out as it exits at the end of section 1 (About)
+						backgroundImageLayer.style.opacity = `${1 - exitProgress}`;
+						backgroundImageLayer.style.visibility = 'visible';
+					} else {
+						// Fully visible in section 0 (Home)
+						backgroundImageLayer.style.opacity = '1';
+						backgroundImageLayer.style.visibility = 'visible';
+					}
 				}
 				
 				console.log('[GSAP] progress', self.progress.toFixed(3), 'exact', exactProgress.toFixed(2), 'mapped', clampedMappedProgress.toFixed(2), 'timeline', clampedTimelineProgress.toFixed(3));
@@ -473,7 +495,39 @@ console.log('[Index] About showImage:', config.about.showImage);
 		width: 100%;
 		height: 100vh;
 		overflow: hidden;
-		transition: background-position 0.1s linear;
+	}
+
+	/* Base background - shows when image moves/zooms or is hidden */
+	.base-background {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: #FFFFFF;
+		z-index: 0;
+	}
+
+	html.dark .base-background {
+		background: #0F172A;
+	}
+
+	/* Background image layer - on top of base background */
+	.background-image-layer {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: 100%;
+		height: 100%;
+		background-size: cover;
+		background-position: right bottom;
+		background-repeat: no-repeat;
+		transform-origin: right bottom;
+		z-index: 1;
+		pointer-events: none;
+		transition: transform 0.15s linear, opacity 0.3s ease;
 	}
 
 	.hero-background-overlay {
@@ -482,13 +536,13 @@ console.log('[Index] About showImage:', config.about.showImage);
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background: rgba(250, 250, 250, 0.6);
-		z-index: 0;
+		background: rgba(250, 250, 250, 0.4);
+		z-index: 2;
 		pointer-events: none;
 	}
 
 	html.dark .hero-background-overlay {
-		background: rgba(15, 23, 42, 0.6);
+		background: rgba(15, 23, 42, 0.4);
 	}
 
 	.scroll-panel {
@@ -497,6 +551,8 @@ console.log('[Index] About showImage:', config.about.showImage);
 		display: flex;
 		align-items: flex-start;
 		justify-content: flex-start;
+		position: relative;
+		z-index: 10;
 	}
 
 	/* Override default section fade for this experience */
