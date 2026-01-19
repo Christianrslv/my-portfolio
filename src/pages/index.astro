@@ -346,12 +346,14 @@ console.log('[Index] About showImage:', config.about.showImage);
 					backgroundImageLayer.style.backgroundPosition = 'right bottom';
 					
 					// Zoom behavior: completes by 70% through section 0 (before section 1 content appears)
+					// Only apply zoom on desktop (>= 1024px)
+					const isDesktop = window.innerWidth >= 1024;
 					const zoomStart = 1.0;
 					const zoomEnd = 1.5;
 					const zoomProgress = currentSection === 0
 						? Math.min(1, sectionProgress / 0.7) // Complete zoom by 70% of section 0
 						: 1;
-					const zoomScale = zoomStart + (zoomEnd - zoomStart) * zoomProgress;
+					const zoomScale = isDesktop ? zoomStart + (zoomEnd - zoomStart) * zoomProgress : 1.0;
 
 					// Exit animation: image slides left and fades out during section 1
 					// Starts immediately at section 1, completes by 60% (before section 2 content appears)
