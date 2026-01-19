@@ -8,8 +8,8 @@ const { number, title } = Astro.props;
 ---
 
 <h2 class="section-title">
-	<span class="section-number">{number}.</span>
-	{title}
+	<span class="section-number hidden">{number}.</span>
+	<span>{title}</span>
 </h2>
 
 <style>

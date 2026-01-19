@@ -4,9 +4,6 @@ import SectionTitle from './SectionTitle.astro';
 interface Props {
 	paragraphs?: string[];
 	stats?: Array<{ number: string; label: string }>;
-	showImage?: boolean;
-	imageUrl?: string;
-	imageAlt?: string;
 }
 
 const {
@@ -19,16 +16,15 @@ const {
 		{ number: "5+", label: "Years Experience" },
 		{ number: "100+", label: "Happy Clients" },
 	],
-	showImage = true,
-	imageUrl,
-	imageAlt = "Profile photo",
 } = Astro.props;
 ---
 
-<section id="about" class="section about">
-	<div class="container">
-		<SectionTitle number="01" title="About Me" />
-		<div class="about-content">
+<section id="about" class="section about w-full min-h-screen flex items-center lg:px-3">
+	<div class="flex lg:justify-end lg:basis-[60%] 4xl:basis-[50%]">
+    <div class="flex flex-col lg:max-w-4xl 3xl:max-w-240 4xl:max-w-5xl">
+      <SectionTitle number="01" title="About Me" />
+      <div class="about-content">
+    </div>
 			<div class="about-text">
 				{paragraphs.map((paragraph) => (
 					<p>{paragraph}</p>
@@ -42,64 +38,16 @@ const {
 					))}
 				</div>
 			</div>
-			{showImage && (
-				<div class="about-image">
-					{imageUrl ? (
-						<div class="image-wrapper">
-							<img 
-								src={imageUrl} 
-								alt={imageAlt}
-								class="profile-image"
-								onerror="console.error('Failed to load image:', this.src)"
-								onload="console.log('Image loaded successfully:', this.src)"
-							/>
-						</div>
-					) : (
-						<div class="image-placeholder">
-							<div class="image-gradient"></div>
-						</div>
-					)}
-				</div>
-			)}
 		</div>
 	</div>
 </section>
 
 <style>
-	.about-content {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 4rem;
-		align-items: flex-start;
-	}
-
-	@media (min-width: 1536px) {
-		.about-content {
-			gap: 6rem;
-		}
-	}
-
-	@media (max-width: 1024px) {
-		.about-content {
-			gap: 3rem;
-		}
-	}
-
 	.about-text p {
 		font-size: 1.125rem;
 		color: var(--text-secondary);
 		margin-bottom: 1.5rem;
 		line-height: 1.8;
-	}
-
-	.about-stats {
-		display: flex;
-		gap: 3rem;
-		margin-top: 2rem;
-	}
-
-	.stat {
-		text-align: center;
 	}
 
 	.stat-number {
@@ -113,76 +61,5 @@ const {
 		color: var(--text-secondary);
 		font-size: 0.875rem;
 		margin-top: 0.5rem;
-	}
-
-	.about-image {
-		position: relative;
-		width: 100%;
-		aspect-ratio: 1;
-	}
-
-	.image-wrapper {
-		width: 100%;
-		height: 100%;
-		border-radius: 12px;
-		overflow: hidden;
-		border: 1px solid var(--border-color);
-		background: var(--bg-tertiary);
-	}
-
-	.profile-image {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
-	}
-
-	/* Debug: Show if image fails to load */
-	.profile-image:not([src]) {
-		display: none;
-	}
-
-	.image-placeholder {
-		width: 100%;
-		aspect-ratio: 1;
-		border-radius: 12px;
-		overflow: hidden;
-		position: relative;
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
-	}
-
-	.image-gradient {
-		width: 100%;
-		height: 100%;
-		background: var(--accent-primary);
-		opacity: 0.1;
-		animation: pulse 4s ease-in-out infinite;
-	}
-
-	@keyframes pulse {
-		0%, 100% {
-			opacity: 0.2;
-		}
-		50% {
-			opacity: 0.3;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.about-content {
-			grid-template-columns: 1fr;
-		}
-
-		.about-stats {
-			justify-content: center;
-		}
-	}
-
-	@media (max-width: 480px) {
-		.about-stats {
-			flex-direction: column;
-			gap: 1.5rem;
-		}
 	}
 </style>
