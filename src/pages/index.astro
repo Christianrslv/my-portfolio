@@ -86,10 +86,16 @@ console.log('[Index] About showImage:', config.about.showImage);
 		>
 			<div class="base-background"></div>
 			{config.hero.backgroundImage && (
-				<div 
-					class="background-image-layer"
-					style={`background-image: url('${config.hero.backgroundImage}');`}
-				></div>
+				<>
+					<div 
+						class="background-image-layer"
+						style={`background-image: url('${config.hero.backgroundImage}');`}
+					></div>
+					<!-- Full overlay for Section 0 -->
+					<div class="overlay-full"></div>
+					<!-- Gradient overlay for Section 1 (left side dark, right side transparent) -->
+					<div class="overlay-gradient"></div>
+				</>
 			)}
 			<section id="home" class="scroll-panel flex min-h-screen w-full items-center justify-center">
 				<Hero
@@ -334,10 +340,13 @@ console.log('[Index] About showImage:', config.about.showImage);
 				const clampedMappedProgress = Math.max(0, Math.min(total - 1, mappedProgress));
 				const clampedTimelineProgress = Math.max(0, Math.min(1, timelineProgress));
 				
-				// Animate background focal point and handle image visibility
+				// Animate background focal point and handle image/overlay visibility
 				const backgroundStage = document.getElementById('scroll-stage-bg');
 				const backgroundImageLayer = backgroundStage?.querySelector('.background-image-layer');
+				const overlayFull = backgroundStage?.querySelector('.overlay-full');
+				const overlayGradient = backgroundStage?.querySelector('.overlay-gradient');
 				const hasBackground = backgroundStage?.dataset.backgroundImage;
+				
 				if (backgroundImageLayer && hasBackground) {
 					const currentSection = Math.floor(clampedMappedProgress);
 					const sectionProgress = clampedMappedProgress - currentSection;
@@ -367,24 +376,69 @@ console.log('[Index] About showImage:', config.about.showImage);
 
 					backgroundImageLayer.style.transform = `translateX(${exitTranslate}vw) scale(${zoomScale})`;
 
-					// Handle opacity based on section
-					// Section 0: overlay fades from 0.85 to 1.0 (filter disappears as we scroll)
-					// Section 1: full opacity (no filter), then fade out during exit
+					// ============================================
+					// OVERLAY ANIMATION SYSTEM
+					// ============================================
+					// Section 0: Full overlay transitions to gradient overlay AS ZOOM PROGRESSES
+					//   - Zoom completes at 70% through section 0
+					//   - By zoom completion, full overlay is gone, gradient is fully visible
+					//   - Right side of screen is clear (no overlay) once zoom is done
+					// Section 1: Gradient overlay visible, fades out with exit animation
+					// Section 2+: Everything hidden
+					// ============================================
+					
+					// Overlay transition synced with zoom (completes when zoom completes at 70% of section 0)
+					const overlayTransitionProgress = currentSection === 0 
+						? zoomProgress  // Synced with zoom (0 to 1 as zoom completes)
+						: 1;            // Fully transitioned in section 1+
+					
 					if (currentSection >= BACKGROUND_IMAGE_END_SECTION) {
-						// Completely hidden starting at section 2 (Skills)
+						// Section 2+: Hide everything
 						backgroundImageLayer.style.opacity = '0';
 						backgroundImageLayer.style.visibility = 'hidden';
+						if (overlayFull) {
+							overlayFull.style.opacity = '0';
+							overlayFull.style.visibility = 'hidden';
+						}
+						if (overlayGradient) {
+							overlayGradient.style.opacity = '0';
+							overlayGradient.style.visibility = 'hidden';
+						}
 					} else if (currentSection === 1) {
-						// No filter initially (1.0), fade out during exit
-						const fadeOpacity = 1 - exitProgress;
-						backgroundImageLayer.style.opacity = `${fadeOpacity}`;
-						backgroundImageLayer.style.visibility = fadeOpacity > 0.01 ? 'visible' : 'hidden';
+						// Section 1: Gradient overlay visible, fades out with exit animation
+						const imageOpacity = 1 - exitProgress;
+						backgroundImageLayer.style.opacity = `${imageOpacity}`;
+						backgroundImageLayer.style.visibility = imageOpacity > 0.01 ? 'visible' : 'hidden';
+						
+						// Full overlay: already gone by section 1
+						if (overlayFull) {
+							overlayFull.style.opacity = '0';
+							overlayFull.style.visibility = 'hidden';
+						}
+						
+						// Gradient overlay: visible, fades out with exit
+						if (overlayGradient) {
+							const gradientOpacity = 1 - exitProgress;
+							overlayGradient.style.opacity = `${gradientOpacity}`;
+							overlayGradient.style.visibility = gradientOpacity > 0.01 ? 'visible' : 'hidden';
+						}
 					} else {
-						// Section 0: overlay fades from 0.85 to 1.0 as we progress through the section
-						// By the end of section 0, opacity is 1.0 (no filter)
-						const overlayOpacity = 0.85 + (0.15 * sectionProgress);
-						backgroundImageLayer.style.opacity = `${overlayOpacity}`;
+						// Section 0: Transition from full overlay to gradient as zoom progresses
+						backgroundImageLayer.style.opacity = '1';
 						backgroundImageLayer.style.visibility = 'visible';
+						
+						// Full overlay: fades out as zoom progresses
+						if (overlayFull) {
+							const fullOverlayOpacity = 1 - overlayTransitionProgress;
+							overlayFull.style.opacity = `${fullOverlayOpacity}`;
+							overlayFull.style.visibility = fullOverlayOpacity > 0.01 ? 'visible' : 'hidden';
+						}
+						
+						// Gradient overlay: fades in as zoom progresses
+						if (overlayGradient) {
+							overlayGradient.style.opacity = `${overlayTransitionProgress}`;
+							overlayGradient.style.visibility = overlayTransitionProgress > 0.01 ? 'visible' : 'hidden';
+						}
 					}
 				}
 				
@@ -530,7 +584,405 @@ console.log('[Index] About showImage:', config.about.showImage);
 		transform-origin: right bottom;
 		z-index: 1;
 		pointer-events: none;
-		transition: transform 0.15s linear, opacity 0.3s ease;
+		transition: transform 0.15s linear;
+	}
+
+	/* ============================================
+	   OVERLAY CUSTOMIZATION VARIABLES
+	   Adjust these to fine-tune the overlay effect
+	   
+	   Breakpoints: xs(480) sm(640) md(768) lg(1024) xl(1280) 2xl(1536) 3xl(1920) 4xl(2560)
+	   ============================================ */
+	
+	/* === BASE / MOBILE (default) === */
+	:root {
+		/* Overlay color: #b5d4e8 (primary color) */
+		--overlay-color: 181, 212, 232;
+		
+		/* Full overlay (Section 0) */
+		--full-direction: 135deg;
+		--full-opacity-start: 0.5;
+		--full-opacity-mid: 0.35;
+		--full-opacity-end: 0.05;
+		--full-stop-1: 0%;
+		--full-stop-2: 50%;
+		--full-stop-3: 100%;
+		
+		/* Gradient overlay (Section 1) */
+		--grad-direction: 180deg;
+		--grad-opacity-start: 1;
+		--grad-opacity-mid: 0.8;
+		--grad-opacity-end: 0;
+		--grad-stop-1: 0%;
+		--grad-stop-2: 35%;
+		--grad-stop-3: 50%;
+	}
+	
+	/* === xs: 480px === */
+	@media (min-width: 480px) {
+		:root {
+			--full-direction: 135deg;
+			--full-opacity-start: 0.5;
+			--full-opacity-mid: 0.35;
+			--full-opacity-end: 0.05;
+			--full-stop-1: 0%;
+			--full-stop-2: 50%;
+			--full-stop-3: 100%;
+			
+			--grad-direction: 180deg;
+			--grad-opacity-start: 1;
+			--grad-opacity-mid: 0.8;
+			--grad-opacity-end: 0;
+			--grad-stop-1: 0%;
+			--grad-stop-2: 35%;
+			--grad-stop-3: 50%;
+		}
+	}
+	
+	/* === sm: 640px === */
+	@media (min-width: 640px) {
+		:root {
+			--full-direction: 135deg;
+			--full-opacity-start: 0.5;
+			--full-opacity-mid: 0.35;
+			--full-opacity-end: 0.05;
+			--full-stop-1: 0%;
+			--full-stop-2: 50%;
+			--full-stop-3: 100%;
+			
+			--grad-direction: 180deg;
+			--grad-opacity-start: 1;
+			--grad-opacity-mid: 0.8;
+			--grad-opacity-end: 0;
+			--grad-stop-1: 0%;
+			--grad-stop-2: 35%;
+			--grad-stop-3: 50%;
+		}
+	}
+	
+	/* === md: 768px === */
+	@media (min-width: 768px) {
+		:root {
+			--full-direction: 135deg;
+			--full-opacity-start: 0.5;
+			--full-opacity-mid: 0.35;
+			--full-opacity-end: 0.05;
+			--full-stop-1: 0%;
+			--full-stop-2: 50%;
+			--full-stop-3: 100%;
+			
+			--grad-direction: 180deg;
+			--grad-opacity-start: 1;
+			--grad-opacity-mid: 0.8;
+			--grad-opacity-end: 0;
+			--grad-stop-1: 0%;
+			--grad-stop-2: 35%;
+			--grad-stop-3: 50%;
+		}
+	}
+	
+	/* === lg: 1024px === */
+	@media (min-width: 1024px) {
+		:root {
+			--full-direction: 135deg;
+			--full-opacity-start: 0.5;
+			--full-opacity-mid: 0.35;
+			--full-opacity-end: 0.05;
+			--full-stop-1: 0%;
+			--full-stop-2: 50%;
+			--full-stop-3: 100%;
+			
+			--grad-direction: 102deg;
+			--grad-opacity-start: 1;
+			--grad-opacity-mid: 0.8;
+			--grad-opacity-end: 0;
+			--grad-stop-1: 37%;
+			--grad-stop-2: 44%;
+			--grad-stop-3: 52%;
+		}
+	}
+	
+	/* === xl: 1280px === */
+	@media (min-width: 1280px) {
+		:root {
+			--full-direction: 135deg;
+			--full-opacity-start: 0.5;
+			--full-opacity-mid: 0.35;
+			--full-opacity-end: 0.05;
+			--grad-stop-1: 40%;
+			--grad-stop-2: 54%;
+			--grad-stop-3: 76%;
+			
+			--grad-direction: 100deg;
+			--grad-opacity-start: 1;
+			--grad-opacity-mid: 0.8;
+			--grad-opacity-end: 0;
+			--grad-stop-1: 38%;
+			--grad-stop-2: 50%;
+			--grad-stop-3: 62%;
+		}
+	}
+	
+	/* === 2xl: 1536px === */
+	@media (min-width: 1536px) {
+		:root {
+			--full-direction: 135deg;
+			--full-opacity-start: 0.5;
+			--full-opacity-mid: 0.35;
+			--full-opacity-end: 0.05;
+			--full-stop-1: 0%;
+			--full-stop-2: 50%;
+			--full-stop-3: 100%;
+			
+			--grad-direction: 95deg;
+			--grad-opacity-start: 1;
+			--grad-opacity-mid: 0.8;
+			--grad-opacity-end: 0;
+			--grad-stop-1: 36%;
+			--grad-stop-2: 50%;
+			--grad-stop-3: 70%;
+		}
+	}
+	
+	/* === 3xl: 1920px === */
+	@media (min-width: 1920px) {
+		:root {
+			--full-direction: 135deg;
+			--full-opacity-start: 0.5;
+			--full-opacity-mid: 0.35;
+			--full-opacity-end: 0.05;
+			--full-stop-1: 0%;
+			--full-stop-2: 50%;
+			--full-stop-3: 100%;
+			
+			--grad-direction: 95deg;
+			--grad-opacity-start: 1;
+			--grad-opacity-mid: 0.8;
+			--grad-opacity-end: 0;
+			--grad-stop-1: 40%;
+			--grad-stop-2: 54%;
+			--grad-stop-3: 76%;
+		}
+	}
+	
+	/* === 4xl: 2560px === */
+	@media (min-width: 2560px) {
+		:root {
+			--full-direction: 135deg;
+			--full-opacity-start: 0.5;
+			--full-opacity-mid: 0.35;
+			--full-opacity-end: 0.05;
+			--full-stop-1: 0%;
+			--full-stop-2: 50%;
+			--full-stop-3: 100%;
+			
+			--grad-direction: 95deg;
+			--grad-opacity-start: 1;
+			--grad-opacity-mid: 0.8;
+			--grad-opacity-end: 0;
+			--grad-stop-1: 40%;
+			--grad-stop-2: 54%;
+			--grad-stop-3: 76%;
+		}
+	}
+	
+	/* === DARK MODE === */
+	html.dark {
+		--overlay-color: 15, 23, 42;
+		
+		--full-direction: 135deg;
+		--full-opacity-start: 0.6;
+		--full-opacity-mid: 0.4;
+		--full-opacity-end: 0.05;
+		--full-stop-1: 0%;
+		--full-stop-2: 50%;
+		--full-stop-3: 100%;
+		
+		--grad-direction: 180deg;
+		--grad-opacity-start: 1;
+		--grad-opacity-mid: 0.8;
+		--grad-opacity-end: 0;
+		--grad-stop-1: 0%;
+		--grad-stop-1a: 17.5%;
+		--grad-opacity-1a: 0.9;
+		--grad-stop-2: 35%;
+		--grad-stop-2a: 42.5%;
+		--grad-opacity-2a: 0.4;
+		--grad-stop-3: 50%;
+	}
+	
+	/* Dark mode breakpoints */
+	@media (min-width: 480px) {
+		html.dark {
+			--grad-direction: 180deg;
+      --grad-opacity-start: 1;
+      --grad-opacity-mid: 0.8;
+      --grad-opacity-end: 0;
+      --grad-stop-1: 0%;
+      --grad-stop-1a: 17.5%;
+      --grad-opacity-1a: 0.9;
+      --grad-stop-2: 35%;
+      --grad-stop-2a: 43.5%;
+      --grad-opacity-2a: 0.6;
+      --grad-stop-3: 60%;
+		}
+	}
+	
+	@media (min-width: 640px) {
+		html.dark {
+			--grad-direction: 180deg;
+      --grad-opacity-start: 1;
+      --grad-opacity-mid: 0.8;
+      --grad-opacity-end: 0;
+      --grad-stop-1: 0%;
+      --grad-stop-1a: 17.5%;
+      --grad-opacity-1a: 0.9;
+      --grad-stop-2: 35%;
+      --grad-stop-2a: 43.5%;
+      --grad-opacity-2a: 0.6;
+      --grad-stop-3: 60%;
+		}
+	}
+	
+	@media (min-width: 768px) {
+		html.dark {
+			--grad-direction: 180deg;
+      --grad-opacity-start: 1;
+      --grad-opacity-mid: 0.8;
+      --grad-opacity-end: 0;
+      --grad-stop-1: 0%;
+      --grad-stop-1a: 17.5%;
+      --grad-opacity-1a: 0.9;
+      --grad-stop-2: 35%;
+      --grad-stop-2a: 43.5%;
+      --grad-opacity-2a: 0.6;
+      --grad-stop-3: 60%;
+		}
+	}
+	
+	@media (min-width: 1024px) {
+		html.dark {
+			--grad-direction: 102deg;
+      --grad-opacity-start: 0.8;
+      --grad-opacity-mid: 0.6;
+      --grad-opacity-end: 0;
+      --grad-stop-1: 23%;
+      --grad-stop-1a: 35%;
+      --grad-opacity-1a: 0.715;
+      --grad-stop-2: 47%;
+      --grad-stop-2a: 65.5%;
+      --grad-opacity-2a: 0.315;
+      --grad-stop-3: 84%;
+		}
+	}
+	
+	@media (min-width: 1280px) {
+		html.dark {
+      --grad-direction: 100deg;
+      --grad-opacity-start: 0.95;
+      --grad-opacity-mid: 0.7;
+      --grad-opacity-end: 0;
+      --grad-stop-1: 14%;
+      --grad-stop-1a: 27.5%;
+      --grad-opacity-1a: 0.825;
+      --grad-stop-2: 41%;
+      --grad-stop-2a: 68%;
+      --grad-opacity-2a: 0.35;
+      --grad-stop-3: 95%;
+		}
+	}
+	
+	@media (min-width: 1536px) {
+		html.dark {
+      --grad-direction: 95deg;
+      --grad-opacity-start: 0.96;
+      --grad-opacity-mid: 0.7;
+      --grad-opacity-end: 0;
+      --grad-stop-1: 16%;
+      --grad-stop-1a: 31%;
+      --grad-opacity-1a: 0.83;
+      --grad-stop-2: 46%;
+      --grad-stop-2a: 70.5%;
+      --grad-opacity-2a: 0.35;
+      --grad-stop-3: 95%;
+		}
+	}
+	
+	@media (min-width: 1920px) {
+		html.dark {
+			--grad-direction: 95deg;
+      --grad-opacity-start: 0.98;
+      --grad-opacity-mid: 0.75;
+      --grad-opacity-end: 0;
+      --grad-stop-1: 31%;
+      --grad-stop-1a: 44%;
+      --grad-opacity-1a: 0.905;
+      --grad-stop-2: 57%;
+      --grad-stop-2a: 75.5%;
+      --grad-opacity-2a: 0.415;
+      --grad-stop-3: 94%;
+		}
+	}
+	
+	@media (min-width: 2560px) {
+		html.dark {
+			--grad-direction: 95deg;
+      --grad-opacity-start: 1;
+      --grad-opacity-mid: 0.74;
+      --grad-opacity-end: 0;
+      --grad-stop-1: 40%;
+      --grad-stop-1a: 54%;
+      --grad-opacity-1a: 0.87;
+      --grad-stop-2: 60%;
+      --grad-stop-2a: 69%;
+      --grad-opacity-2a: 0.51;
+      --grad-stop-3: 78%;
+		}
+	}
+
+	/* Full overlay for Section 0 
+	   Shape: linear-gradient (change to radial-gradient for circular effect)
+	   For radial: replace "var(--full-direction)" with "circle at top left" */
+	.overlay-full {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 2;
+		pointer-events: none;
+		opacity: 1;
+		transition: opacity 0.3s ease;
+		background: linear-gradient(
+			var(--full-direction),
+			rgba(var(--overlay-color), var(--full-opacity-start)) var(--full-stop-1),
+			rgba(var(--overlay-color), var(--full-opacity-mid)) var(--full-stop-2),
+			rgba(var(--overlay-color), var(--full-opacity-end)) var(--full-stop-3)
+		);
+	}
+
+	/* Gradient overlay for Section 1
+	   Shape: linear-gradient (change to radial-gradient for circular effect)
+	   For radial: replace "var(--grad-direction)" with "circle at left center" */
+	.overlay-gradient {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 2;
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 0.3s ease;
+		/* 5-stop gradient for smoother transitions (intermediate stops default to adjacent values if not set) */
+		background: linear-gradient(
+			var(--grad-direction),
+			rgba(var(--overlay-color), var(--grad-opacity-start)) var(--grad-stop-1),
+			rgba(var(--overlay-color), var(--grad-opacity-1a, var(--grad-opacity-start))) var(--grad-stop-1a, var(--grad-stop-1)),
+			rgba(var(--overlay-color), var(--grad-opacity-mid)) var(--grad-stop-2),
+			rgba(var(--overlay-color), var(--grad-opacity-2a, var(--grad-opacity-mid))) var(--grad-stop-2a, var(--grad-stop-2)),
+			rgba(var(--overlay-color), var(--grad-opacity-end)) var(--grad-stop-3)
+		);
 	}
 
 
