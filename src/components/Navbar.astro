@@ -30,12 +30,16 @@ const { logo = 'Portfolio', links = [
 	</div>
 </nav>
 
-<!-- Mobile menu with Alpine.js - horizontal expansion -->
-<div x-data="{ open: false }" class="lg:hidden fixed bottom-6 right-6 z-[2000]">
-	<!-- Container that expands horizontally -->
+<!-- Mobile menu with Alpine.js - responsive horizontal expansion -->
+<div 
+	x-data="{ open: false }" 
+	class="lg:hidden fixed bottom-6 right-4 left-4 z-[2000] flex justify-end"
+	id="mobile-menu-container"
+>
+	<!-- Container that expands horizontally - fully transparent -->
 	<div 
-		class="flex items-center justify-end h-14 rounded-full bg-[rgba(250,250,250,0.2)] dark:bg-[rgba(15,23,42,0.2)] backdrop-blur-[20px] border border-white/10 dark:border-white/5 shadow-lg transition-all duration-300 ease-out overflow-hidden"
-		:class="open ? 'w-auto pl-4 pr-1' : 'w-14'"
+		class="mobile-menu-bar flex items-center justify-end min-h-[64px] rounded-full transition-all duration-300 ease-out overflow-hidden"
+		:class="open ? 'w-full xs:w-auto rounded-3xl xs:rounded-full px-4 xs:pl-5 xs:pr-1 py-3 xs:py-0' : 'w-16'"
 	>
 		<!-- Menu items - shown when open -->
 		<div 
@@ -46,18 +50,18 @@ const { logo = 'Portfolio', links = [
 			x-transition:leave="transition ease-in duration-200"
 			x-transition:leave-start="opacity-100 translate-x-0"
 			x-transition:leave-end="opacity-0 -translate-x-4"
-			class="flex items-center gap-4 pr-2"
+			class="flex flex-wrap xs:flex-nowrap items-center justify-center xs:justify-start gap-3 xs:gap-5 pr-2 xs:pr-3 flex-1 xs:flex-initial"
 		>
 			{links.map((link) => (
 				<a 
 					href={link.href} 
 					@click="open = false"
-					class="mobile-nav-link whitespace-nowrap no-underline font-light text-sm transition-colors duration-200"
+					class="mobile-nav-link whitespace-nowrap no-underline font-semibold text-sm transition-colors duration-300"
 				>
 					{link.label}
 				</a>
 			))}
-			<div class="border-l border-white/10 dark:border-white/5 pl-3 ml-1">
+			<div class="border-l border-current/20 pl-3 xs:pl-4 ml-1 hidden xs:block">
 				<ThemeToggle />
 			</div>
 		</div>
@@ -68,7 +72,7 @@ const { logo = 'Portfolio', links = [
 			@click="open = !open"
 			@click.outside="open = false"
 			:aria-expanded="open"
-			class="w-14 h-14 flex-shrink-0 rounded-full cursor-pointer flex items-center justify-center transition-all duration-200 hover:bg-white/10 dark:hover:bg-white/5" 
+			class="mobile-menu-button w-16 h-16 flex-shrink-0 rounded-full cursor-pointer flex items-center justify-center transition-all duration-200" 
 			aria-label="Toggle menu"
 		>
 			<!-- Hamburger icon -->
@@ -80,11 +84,11 @@ const { logo = 'Portfolio', links = [
 				x-transition:leave="transition ease-in duration-150"
 				x-transition:leave-start="opacity-100 rotate-0"
 				x-transition:leave-end="opacity-0 rotate-90"
-				class="w-6 h-6 absolute" 
+				class="w-7 h-7 absolute" 
 				viewBox="0 0 24 24" 
 				fill="none" 
 				stroke="currentColor" 
-				stroke-width="2"
+				stroke-width="2.5"
 			>
 				<line x1="3" y1="6" x2="21" y2="6"></line>
 				<line x1="3" y1="12" x2="21" y2="12"></line>
@@ -99,11 +103,11 @@ const { logo = 'Portfolio', links = [
 				x-transition:leave="transition ease-in duration-150"
 				x-transition:leave-start="opacity-100 rotate-0"
 				x-transition:leave-end="opacity-0 rotate-90"
-				class="w-6 h-6 absolute" 
+				class="w-7 h-7 absolute" 
 				viewBox="0 0 24 24" 
 				fill="none" 
 				stroke="currentColor" 
-				stroke-width="2"
+				stroke-width="2.5"
 			>
 				<line x1="18" y1="6" x2="6" y2="18"></line>
 				<line x1="6" y1="6" x2="18" y2="18"></line>
@@ -149,16 +153,146 @@ const { logo = 'Portfolio', links = [
 		width: 100%;
 	}
 
-	/* Mobile menu button icons */
-	[x-data] button svg {
-		color: var(--text-primary);
+	/* Mobile menu bar - fully transparent with subtle blur */
+	.mobile-menu-bar {
+		background: transparent;
+		border-color: transparent;
+		backdrop-filter: blur(3px);
 	}
 
+	/* Contrast-aware text colors - set via JS based on background */
+	/* Default: dark text for light backgrounds */
+	.mobile-menu-bar .mobile-nav-link,
+	.mobile-menu-bar .mobile-menu-button,
+	.mobile-menu-bar svg {
+		color: #1f2937;
+		text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+	}
+
+	.mobile-menu-bar .mobile-nav-link:hover {
+		color: #000;
+	}
+
+	/* Dark mode: light text */
+	html.dark .mobile-menu-bar .mobile-nav-link,
+	html.dark .mobile-menu-bar .mobile-menu-button,
+	html.dark .mobile-menu-bar svg {
+		color: #f9fafb;
+		text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+	}
+
+	html.dark .mobile-menu-bar .mobile-nav-link:hover {
+		color: #fff;
+	}
+
+	/* Contrast-aware mode - light background detected */
+	.mobile-menu-bar.light-bg .mobile-nav-link,
+	.mobile-menu-bar.light-bg .mobile-menu-button,
+	.mobile-menu-bar.light-bg svg {
+		color: #1f2937;
+		text-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+	}
+
+	/* Contrast-aware mode - dark background detected */
+	.mobile-menu-bar.dark-bg .mobile-nav-link,
+	.mobile-menu-bar.dark-bg .mobile-menu-button,
+	.mobile-menu-bar.dark-bg svg {
+		color: #f9fafb;
+		text-shadow: 0 0 8px rgba(0, 0, 0, 0.9);
+	}
+
+	/* Mobile nav link base styles */
 	.mobile-nav-link {
-		color: var(--text-secondary);
-	}
-
-	.mobile-nav-link:hover {
-		color: var(--text-primary);
+		font-weight: 600;
+		transition: color 0.3s ease;
 	}
 </style>
+
+<script is:inline>
+	// Contrast detection for mobile menu
+	(function initContrastDetection() {
+		const menuBar = document.querySelector('.mobile-menu-bar');
+		if (!menuBar) return;
+
+		function detectBackgroundContrast() {
+			// Get the center point of the menu
+			const rect = menuBar.getBoundingClientRect();
+			const x = rect.left + rect.width / 2;
+			const y = rect.top + rect.height / 2;
+
+			// Hide the menu temporarily to sample the background
+			const originalVisibility = menuBar.style.visibility;
+			menuBar.style.visibility = 'hidden';
+
+			// Get element at that point
+			const elementBehind = document.elementFromPoint(x, y);
+			menuBar.style.visibility = originalVisibility;
+
+			if (!elementBehind) return;
+
+			// Get computed background color
+			let bgColor = null;
+			let currentEl = elementBehind;
+			
+			while (currentEl && currentEl !== document.body) {
+				const style = window.getComputedStyle(currentEl);
+				const bg = style.backgroundColor;
+				
+				if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+					bgColor = bg;
+					break;
+				}
+				currentEl = currentEl.parentElement;
+			}
+
+			// Fallback to body background
+			if (!bgColor) {
+				bgColor = window.getComputedStyle(document.body).backgroundColor;
+			}
+
+			// Parse RGB values
+			const rgb = bgColor.match(/\d+/g);
+			if (!rgb || rgb.length < 3) return;
+
+			// Calculate relative luminance
+			const luminance = (0.299 * parseInt(rgb[0]) + 0.587 * parseInt(rgb[1]) + 0.114 * parseInt(rgb[2])) / 255;
+
+			// Apply appropriate class
+			menuBar.classList.remove('light-bg', 'dark-bg');
+			if (luminance > 0.5) {
+				menuBar.classList.add('light-bg');
+			} else {
+				menuBar.classList.add('dark-bg');
+			}
+		}
+
+		// Run on scroll and resize with throttling
+		let ticking = false;
+		function requestTick() {
+			if (!ticking) {
+				requestAnimationFrame(() => {
+					detectBackgroundContrast();
+					ticking = false;
+				});
+				ticking = true;
+			}
+		}
+
+		window.addEventListener('scroll', requestTick, { passive: true });
+		window.addEventListener('resize', requestTick, { passive: true });
+		
+		// Initial detection
+		setTimeout(detectBackgroundContrast, 100);
+		
+		// Also detect on theme change
+		const observer = new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => {
+				if (mutation.attributeName === 'class') {
+					setTimeout(detectBackgroundContrast, 50);
+				}
+			});
+		});
+		
+		observer.observe(document.documentElement, { attributes: true });
+	})();
+</script>

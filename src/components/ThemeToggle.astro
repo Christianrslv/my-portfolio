@@ -1,5 +1,5 @@
 <button
-	class="theme-toggle ml-4 inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] px-3 py-2 text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-tertiary)]"
+	class="theme-toggle inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] px-3 py-2 text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-tertiary)]"
 	type="button"
 	aria-label="Toggle theme"
 >
@@ -7,29 +7,44 @@
 	<span class="theme-label">Light</span>
 </button>
 
-<script>
-	const button = document.querySelector('.theme-toggle');
-	const icon = document.querySelector('.theme-icon');
-	const label = document.querySelector('.theme-label');
+<script is:inline>
+	// Theme toggle - supports multiple buttons on the page
+	(function initThemeToggle() {
+		const buttons = document.querySelectorAll('.theme-toggle');
+		const icons = document.querySelectorAll('.theme-icon');
+		const labels = document.querySelectorAll('.theme-label');
 
-	const setTheme = (isDark) => {
-		document.documentElement.classList.toggle('dark', isDark);
-		localStorage.setItem('theme', isDark ? 'dark' : 'light');
-		if (icon) icon.textContent = isDark ? '🌙' : '🌞';
-		if (label) label.textContent = isDark ? 'Dark' : 'Light';
-	};
+		const updateUI = (isDark) => {
+			icons.forEach(icon => {
+				if (icon) icon.textContent = isDark ? '🌙' : '🌞';
+			});
+			labels.forEach(label => {
+				if (label) label.textContent = isDark ? 'Dark' : 'Light';
+			});
+		};
 
-	const storedTheme = localStorage.getItem('theme');
-	if (storedTheme === 'dark') {
-		setTheme(true);
-	} else {
-		setTheme(false);
-	}
+		const setTheme = (isDark) => {
+			document.documentElement.classList.toggle('dark', isDark);
+			localStorage.setItem('theme', isDark ? 'dark' : 'light');
+			updateUI(isDark);
+		};
 
-	if (button) {
-		button.addEventListener('click', () => {
-			const isDark = document.documentElement.classList.contains('dark');
-			setTheme(!isDark);
+		// Initialize theme from storage
+		const storedTheme = localStorage.getItem('theme');
+		const isDark = storedTheme === 'dark';
+		setTheme(isDark);
+
+		// Add click listeners to ALL theme toggle buttons
+		buttons.forEach(button => {
+			if (button && !button.hasAttribute('data-theme-initialized')) {
+				button.setAttribute('data-theme-initialized', 'true');
+				button.addEventListener('click', (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					const currentlyDark = document.documentElement.classList.contains('dark');
+					setTheme(!currentlyDark);
+				});
+			}
 		});
-	}
+	})();
 </script>
