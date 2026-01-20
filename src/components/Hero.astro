@@ -24,11 +24,11 @@ const {
 	<div class="hero-content w-full flex flex-col items-center justify-center lg:items-start lg:justify-start">
 		<div class="hero-text flex flex-col items-center justify-center lg:items-start lg:justify-start">
 			<h1 class="hero-title flex flex-col items-center justify-center lg:items-start lg:justify-start">
-				<span class="greeting">{greeting}</span>
+				<span class="greeting text-slate-800 text-xl 3xl:text-2xl font-light mb-3 opacity-0">{greeting}</span>
 				<span class="name text-5xl lg:text-7xl xl:text-8xl" data-animate-letters>{name}</span>
-				<span class="role">{role}</span>
+				<span class="role text-accent-secondary font-light mt-2 opacity-0 text-2xl lg:text-3xl">{role}</span>
 			</h1>
-			<p class="hero-description flex flex-col text-center lg:text-left">{description}</p>
+			<p class="hero-description text-lg font-light text-slate-800 mb-12 max-w-xl leading-relaxed tracking-wide opacity-0 lg:text-xl xl:text-xl flex flex-col text-center lg:text-left">{description}</p>
 			<div class="hero-buttons">
 				<a href={primaryButton.href} class="btn btn-primary">{primaryButton.text}</a>
 				<a href={secondaryButton.href} class="btn btn-secondary">{secondaryButton.text}</a>
@@ -38,6 +38,15 @@ const {
 </section>
 
 <style>
+
+  html.dark .greeting {
+    color: #cbd5e1;
+  }
+
+  html.dark .hero-description {
+    color: #cbd5e1;
+  }
+
 	.hero {
 		min-height: 100vh;
 		display: flex;
@@ -62,15 +71,6 @@ const {
 		flex-direction: column;
 		letter-spacing: -0.03em;
 		overflow: visible; /* Ensure animation is visible */
-	}
-
-	.greeting {
-		color: var(--text-secondary);
-		font-size: 1.25rem;
-		font-weight: 300;
-		margin-bottom: 0.75rem;
-		letter-spacing: 0.02em;
-		opacity: 0;
 	}
 	
 	.hero.animate .greeting {
@@ -107,28 +107,8 @@ const {
 	.name .letter-space {
 		width: 0.35em;
 	}
-
-	.role {
-		color: var(--accent-primary);
-		font-size: 1.5rem;
-		font-weight: 300;
-		margin-top: 0.5rem;
-		opacity: 0;
-	}
-	
 	.hero.animate .role {
 		animation: fadeIn 1s ease 0.4s both;
-	}
-
-	.hero-description {
-		font-size: 1.125rem;
-		font-weight: 300;
-		color: var(--text-secondary);
-		margin-bottom: 3rem;
-		max-width: 600px;
-		line-height: 1.9;
-		letter-spacing: 0.01em;
-		opacity: 0;
 	}
 	
 	.hero.animate .hero-description {
