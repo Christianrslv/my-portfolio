@@ -21,13 +21,15 @@ const {
 
 <section id="about" class="section about w-full min-h-screen flex items-start lg:items-center lg:px-3">
 	<div class="flex justify-center lg:justify-end lg:basis-[60%] 4xl:basis-[50%]">
-    <div class="flex flex-col py-6 px-8 lg:max-w-4xl 3xl:max-w-240 4xl:max-w-5xl">
+    <div class="flex flex-col gap-8 lg:max-w-4xl 3xl:max-w-240 4xl:max-w-5xl">
       <SectionTitle number="01" title="About Me" class="flex justify-center lg:justify-start" />
-      <div class="about-text flex flex-col gap-4">
-        {paragraphs.map((paragraph) => (
-          <p class="flex justify-center lg:justify-start m-0 text-base sm:text-lg md:text-xl lg:text-xl xl:text-xl 3xl:text-2xl 4xl:text-3xl leading-relaxed text-text-secondary">{paragraph}</p>
-        ))}
-        <div class="about-stats flex flex-row items-center justify-center lg:justify-start gap-4">
+      <div class="about-text flex flex-col gap-16">
+        <div class="flex flex-col gap-6">
+          {paragraphs.map((paragraph) => (
+            <p class="flex justify-center lg:justify-start m-0 text-xl lg:text-xl xl:text-xl 3xl:text-2xl 4xl:text-3xl leading-relaxed text-text-secondary">{paragraph}</p>
+          ))}
+        </div>
+        <div class="about-stats flex flex-row items-center justify-center gap-4">
           {stats.map((stat) => (
             <div class="stat flex items-center justify-center lg:justify-start gap-2">
               <div class="font-serif font-light text-5xl 4xl:text-6xl text-accent-secondary">{stat.number}</div>

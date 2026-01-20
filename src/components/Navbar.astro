@@ -15,13 +15,13 @@ const { logo = 'Portfolio', links = [
 ] } = Astro.props;
 ---
 
-<nav class="navbar">
-	<div class="nav-container">
-		<a href="#home" class="logo">{logo}</a>
-		<div class="nav-actions">
-			<ul class="nav-links">
+<nav class="navbar fixed top-0 left-0 right-0 z-[2000] bg-[rgba(250,250,250,0.35)] dark:bg-[rgba(15,23,42,0.35)] backdrop-blur-[20px] border-b transition-all duration-200 hidden lg:block">
+	<div class="w-full px-12 py-6 lg:px-8 xl:px-12 flex justify-between items-center">
+		<a href="#home" class="nav-logo font-serif text-xl font-normal no-underline transition-colors duration-200 tracking-wide">{logo}</a>
+		<div class="flex items-center gap-4">
+			<ul class="flex list-none gap-8 m-0 p-0">
 				{links.map((link) => (
-					<li><a href={link.href}>{link.label}</a></li>
+					<li><a href={link.href} class="nav-link no-underline font-light text-[0.95rem] transition-colors duration-200 relative tracking-wide">{link.label}</a></li>
 				))}
 			</ul>
 			<ThemeToggle />
@@ -29,88 +29,52 @@ const { logo = 'Portfolio', links = [
 	</div>
 </nav>
 
+<!-- Mobile floating menu button -->
+<button id="mobile-menu-button" class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[rgba(250,250,250,0.2)] dark:bg-[rgba(15,23,42,0.2)] backdrop-blur-[20px] border border-white/10 dark:border-white/5 z-[2000] cursor-pointer flex items-center justify-center transition-all duration-300 shadow-lg dark:shadow-lg/30 hover:bg-[rgba(250,250,250,0.3)] dark:hover:bg-[rgba(15,23,42,0.3)] hover:scale-105 lg:hidden" aria-label="Toggle menu">
+	<svg class="menu-icon w-6 h-6 transition-all duration-300 absolute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+		<line x1="3" y1="6" x2="21" y2="6"></line>
+		<line x1="3" y1="12" x2="21" y2="12"></line>
+		<line x1="3" y1="18" x2="21" y2="18"></line>
+	</svg>
+	<svg class="close-icon w-6 h-6 transition-all duration-300 absolute opacity-0 rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+		<line x1="18" y1="6" x2="6" y2="18"></line>
+		<line x1="6" y1="6" x2="18" y2="18"></line>
+	</svg>
+</button>
+
+<!-- Mobile expanded menu -->
+<div id="mobile-menu" class="fixed bottom-0 left-0 right-0 bg-[rgba(250,250,250,0.2)] dark:bg-[rgba(15,23,42,0.2)] backdrop-blur-[20px] border-t border-white/10 dark:border-white/5 z-[1999] translate-y-full transition-transform duration-300 ease-out max-h-[80vh] overflow-y-auto lg:hidden">
+	<div class="px-6 py-8 pb-[calc(1.5rem+56px+1.5rem)]">
+		<ul class="flex flex-col gap-6 list-none m-0 p-0">
+			{links.map((link) => (
+				<li><a href={link.href} class="mobile-nav-link block no-underline font-light text-lg py-3 transition-colors duration-200 relative">{link.label}</a></li>
+			))}
+		</ul>
+		<div class="mt-8 pt-8 border-t border-white/10 dark:border-white/5 flex justify-center">
+			<ThemeToggle />
+		</div>
+	</div>
+</div>
+
 <style>
 	.navbar {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		z-index: 2000;
-		background: rgba(250, 250, 250, 0.35);
-		backdrop-filter: blur(20px);
-		border-bottom: 1px solid var(--border-color);
-		transition: all 0.2s ease;
+		border-color: var(--border-color);
 	}
 
-	html.dark .navbar {
-		background: rgba(15, 23, 42, 0.35);
-	}
-
-	.nav-container {
-		width: 100%;
-		padding: 1.5rem 3rem;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	@media (max-width: 1024px) {
-		.nav-container {
-			padding: 1.5rem 2rem;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.nav-container {
-			padding: 1rem 1.5rem;
-		}
-	}
-
-	@media (max-width: 480px) {
-		.nav-container {
-			padding: 1rem;
-		}
-	}
-
-	.logo {
-		font-family: 'Libre Baskerville', serif;
-		font-size: 1.25rem;
-		font-weight: 400;
+	.nav-logo {
 		color: var(--text-primary);
-		text-decoration: none;
-		transition: color 0.2s ease;
-		letter-spacing: 0.02em;
 	}
 
-	.logo:hover {
+	.nav-logo:hover {
 		color: var(--accent-primary);
 	}
 
-	.nav-links {
-		display: flex;
-		list-style: none;
-		gap: 2rem;
-		margin: 0;
-		padding: 0;
-	}
-
-	.nav-actions {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.nav-links a {
+	.nav-link {
 		color: var(--text-secondary);
-		text-decoration: none;
-		font-weight: 300;
-		font-size: 0.95rem;
-		transition: color 0.2s ease;
-		position: relative;
-		letter-spacing: 0.01em;
 	}
 
-	.nav-links a::after {
+	/* Nav link underline animation */
+	.nav-link::after {
 		content: '';
 		position: absolute;
 		bottom: -4px;
@@ -121,37 +85,66 @@ const { logo = 'Portfolio', links = [
 		transition: width 0.2s ease;
 	}
 
-	.nav-links a:hover {
+	.nav-link:hover {
 		color: var(--accent-primary);
 	}
 
-	.nav-links a:hover::after {
+	.nav-link:hover::after {
 		width: 100%;
 	}
 
-	@media (max-width: 768px) {
-		.nav-links {
-			gap: 1rem;
-			font-size: 0.875rem;
-		}
+	#mobile-menu-button .menu-icon,
+	#mobile-menu-button .close-icon {
+		color: var(--text-primary);
 	}
 
-	@media (max-width: 480px) {
-		.nav-container {
-			padding: 1rem;
-		}
+	.mobile-nav-link {
+		color: var(--text-primary);
+	}
 
-		.nav-links {
-			gap: 0.75rem;
-			font-size: 0.75rem;
-		}
+	/* Mobile nav link underline animation */
+	.mobile-nav-link::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 0;
+		height: 2px;
+		background: var(--accent-primary);
+		transition: width 0.2s ease;
+	}
+
+	.mobile-nav-link:hover {
+		color: var(--accent-primary);
+	}
+
+	.mobile-nav-link:hover::after {
+		width: 100%;
+	}
+
+	/* Mobile menu button active state */
+	#mobile-menu-button.active .menu-icon {
+		opacity: 0;
+		transform: rotate(90deg);
+	}
+
+	#mobile-menu-button.active .close-icon {
+		opacity: 1;
+		transform: rotate(0deg);
+	}
+
+	/* Mobile menu active state */
+	#mobile-menu.active {
+		transform: translateY(0);
 	}
 </style>
 
 <script>
-	// Navbar background on scroll
+	// Navbar background on scroll (desktop only)
 	window.addEventListener('scroll', () => {
-		const navbar = document.querySelector('.navbar');
+		const navbar = document.querySelector('nav');
+		if (!navbar || window.innerWidth <= 1024) return;
+		
 		const isDark = document.documentElement.classList.contains('dark');
 		const currentScroll = window.pageYOffset;
 
@@ -168,5 +161,44 @@ const { logo = 'Portfolio', links = [
 				navbar.style.background = 'rgba(250, 250, 250, 0.8)';
 			}
 		}
+	});
+
+	// Mobile menu toggle
+	document.addEventListener('DOMContentLoaded', () => {
+		const menuButton = document.getElementById('mobile-menu-button');
+		const mobileMenu = document.getElementById('mobile-menu');
+		const mobileLinks = document.querySelectorAll('.mobile-nav-link');
+
+		if (!menuButton || !mobileMenu) return;
+
+		menuButton.addEventListener('click', () => {
+			const isActive = menuButton.classList.toggle('active');
+			mobileMenu.classList.toggle('active');
+			
+			// Prevent body scroll when menu is open
+			if (isActive) {
+				document.body.style.overflow = 'hidden';
+			} else {
+				document.body.style.overflow = '';
+			}
+		});
+
+		// Close menu when clicking a link
+		mobileLinks.forEach(link => {
+			link.addEventListener('click', () => {
+				menuButton.classList.remove('active');
+				mobileMenu.classList.remove('active');
+				document.body.style.overflow = '';
+			});
+		});
+
+		// Close menu when clicking outside
+		mobileMenu.addEventListener('click', (e) => {
+			if (e.target === mobileMenu) {
+				menuButton.classList.remove('active');
+				mobileMenu.classList.remove('active');
+				document.body.style.overflow = '';
+			}
+		});
 	});
 </script>
