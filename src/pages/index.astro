@@ -144,6 +144,9 @@ console.log('[Index] About showImage:', config.about.showImage);
 
 	gsap.registerPlugin(ScrollTrigger);
 
+		// Check if we're on mobile (card stacking mode)
+		const isMobile = () => window.innerWidth <= 1024;
+
 		function initScrollExperience() {
 		const scrollRoot = document.querySelector('#scroll-root');
 		const scrollStage = document.querySelector('.scroll-stage');
@@ -153,6 +156,24 @@ console.log('[Index] About showImage:', config.about.showImage);
 			return;
 		}
 
+		// On mobile, use CSS-based card stacking instead of GSAP
+		if (isMobile()) {
+			console.log('[GSAP] Mobile detected - using CSS card stacking');
+			
+			// Reset any GSAP-applied styles for mobile
+			sections.forEach((section) => {
+				gsap.set(section, {
+					clearProps: 'all'
+				});
+			});
+			
+			// Ensure scroll root height is auto for mobile
+			scrollRoot.style.height = 'auto';
+			
+			return; // Skip GSAP scroll experience on mobile
+		}
+
+		console.log('[GSAP] Desktop detected - initializing GSAP scroll experience');
 		console.log('[GSAP] initScrollExperience', { total: sections.length });
 
 		const total = sections.length;
@@ -535,10 +556,123 @@ console.log('[Index] About showImage:', config.about.showImage);
 		});
 	}
 
+	// Track current mode to detect changes
+	let currentMode = isMobile() ? 'mobile' : 'desktop';
+	let scrollTriggerInstance = null;
+
+	function init() {
+		initScrollExperience();
+	}
+
+	// Handle resize to switch between mobile and desktop modes
+	function handleResize() {
+		const newMode = isMobile() ? 'mobile' : 'desktop';
+		
+		if (newMode !== currentMode) {
+			console.log(`[GSAP] Mode changed: ${currentMode} -> ${newMode}`);
+			currentMode = newMode;
+			
+			// Kill existing ScrollTrigger instances
+			ScrollTrigger.getAll().forEach(st => st.kill());
+			
+			// Re-initialize with new mode
+			initScrollExperience();
+		}
+	}
+
+	// Debounced resize handler
+	let resizeTimeout;
+	window.addEventListener('resize', () => {
+		clearTimeout(resizeTimeout);
+		resizeTimeout = setTimeout(handleResize, 150);
+	});
+
 	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', initScrollExperience);
+		document.addEventListener('DOMContentLoaded', init);
 	} else {
-		setTimeout(initScrollExperience, 50);
+		setTimeout(init, 50);
+	}
+
+	// Mobile scroll handler for background fade
+	// Matches desktop behavior: overlay transitions during Hero, background fades when entering Skills
+	function initMobileBackgroundFade() {
+		if (!isMobile()) return;
+		
+		const backgroundImageLayer = document.querySelector('.background-image-layer');
+		const overlayFull = document.querySelector('.overlay-full');
+		const overlayGradient = document.querySelector('.overlay-gradient');
+		const baseBackground = document.querySelector('.base-background');
+		const heroSection = document.getElementById('home');
+		const aboutSection = document.getElementById('about');
+		const skillsSection = document.getElementById('skills');
+		
+		if (!heroSection || !aboutSection) return;
+
+		function updateBackgroundOnScroll() {
+			if (!isMobile()) return;
+			
+			const scrollY = window.scrollY;
+			const heroHeight = heroSection.offsetHeight;
+			const aboutTop = aboutSection.offsetTop;
+			const aboutHeight = aboutSection.offsetHeight;
+			const skillsTop = skillsSection ? skillsSection.offsetTop : aboutTop + aboutHeight;
+			
+			// Phase 1: Overlay transition (during Hero section)
+			// Full overlay transitions to gradient overlay by 70% of Hero scroll
+			const overlayTransitionEnd = heroHeight * 0.7;
+			
+			let overlayProgress = 0;
+			if (scrollY > 0 && scrollY < overlayTransitionEnd) {
+				overlayProgress = scrollY / overlayTransitionEnd;
+			} else if (scrollY >= overlayTransitionEnd) {
+				overlayProgress = 1;
+			}
+			
+			// Phase 2: Background fade out (when Skills section starts covering About)
+			// Background stays visible through Hero and About, fades when entering Skills
+			const fadeStart = aboutTop + (aboutHeight * 0.5);
+			const fadeEnd = skillsTop + (window.innerHeight * 0.3);
+			
+			let fadeProgress = 0;
+			if (scrollY > fadeStart) {
+				fadeProgress = Math.min(1, (scrollY - fadeStart) / (fadeEnd - fadeStart));
+			}
+			
+			// Apply overlay transitions (same as desktop)
+			if (overlayFull) {
+				const fullOpacity = (1 - overlayProgress) * (1 - fadeProgress);
+				overlayFull.style.opacity = String(Math.max(0, fullOpacity));
+				overlayFull.style.visibility = fullOpacity > 0.01 ? 'visible' : 'hidden';
+			}
+			
+			if (overlayGradient) {
+				const gradientOpacity = overlayProgress * (1 - fadeProgress);
+				overlayGradient.style.opacity = String(Math.max(0, gradientOpacity));
+				overlayGradient.style.visibility = gradientOpacity > 0.01 ? 'visible' : 'hidden';
+			}
+			
+			// Fade out background image when entering Skills
+			if (backgroundImageLayer) {
+				const bgOpacity = 1 - fadeProgress;
+				backgroundImageLayer.style.opacity = String(Math.max(0, bgOpacity));
+				backgroundImageLayer.style.visibility = bgOpacity > 0.01 ? 'visible' : 'hidden';
+			}
+			
+			// Base background stays visible
+			if (baseBackground) {
+				baseBackground.style.opacity = '1';
+			}
+		}
+
+		window.addEventListener('scroll', updateBackgroundOnScroll, { passive: true });
+		updateBackgroundOnScroll(); // Initial call
+	}
+
+	// Initialize mobile background fade
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initMobileBackgroundFade);
+	} else {
+		initMobileBackgroundFade();
 	}
 </script>
 
@@ -936,6 +1070,150 @@ console.log('[Index] About showImage:', config.about.showImage);
 	.scroll-panel .section {
 		opacity: 1 !important;
 		transform: none !important;
+	}
+
+	/* ============================================
+	   MOBILE CARD STACKING EFFECT (≤1024px)
+	   - Sections 0-1 (Hero, About): Original behavior with background image
+	   - Section 2+ (Skills onward): Card stacking effect
+	   ============================================ */
+	@media (max-width: 1024px) {
+		#scroll-root {
+			height: auto !important;
+		}
+
+		.scroll-stage {
+			height: auto !important;
+			overflow: visible;
+			position: relative;
+		}
+
+		/* Background layers - FIXED position so they stay visible behind sections 0-1 */
+		.base-background {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			z-index: 0;
+		}
+
+		.background-image-layer {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			z-index: 1;
+		}
+
+		.overlay-full {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			z-index: 2;
+		}
+
+		.overlay-gradient {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			z-index: 3;
+		}
+
+		/* Base scroll-panel styles */
+		.scroll-panel {
+			min-height: 100vh;
+			position: relative;
+		}
+
+		/* ========== SECTION 0 (Hero) - Original behavior ========== */
+		.scroll-panel#home,
+		.scroll-panel:nth-child(1) {
+			background: transparent;
+			position: relative;
+			z-index: 10;
+		}
+
+		.scroll-panel#home .section,
+		.scroll-panel#home .container,
+		.scroll-panel#home .hero,
+		.scroll-panel:nth-child(1) .section,
+		.scroll-panel:nth-child(1) .container {
+			background: transparent !important;
+		}
+
+		/* ========== SECTION 1 (About) - Original behavior with background ========== */
+		.scroll-panel#about,
+		.scroll-panel:nth-child(2) {
+			background: transparent;
+			position: relative;
+			z-index: 11;
+			/* Add scroll tolerance - extra padding at bottom before next section */
+			padding-bottom: 30vh;
+		}
+
+		.scroll-panel#about .section,
+		.scroll-panel#about .container,
+		.scroll-panel:nth-child(2) .section,
+		.scroll-panel:nth-child(2) .container {
+			background: transparent !important;
+		}
+
+		/* ========== SECTION 2+ (Skills onward) - Card stacking ========== */
+		.scroll-panel:nth-child(n+3) {
+			position: sticky;
+			top: 0;
+			background: var(--bg-primary);
+			/* Shadow for depth effect as cards stack */
+			box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08), 0 -2px 8px rgba(0, 0, 0, 0.04);
+			/* Rounded top corners for card effect */
+			border-top-left-radius: 20px;
+			border-top-right-radius: 20px;
+		}
+
+		html.dark .scroll-panel:nth-child(n+3) {
+			box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.3), 0 -2px 8px rgba(0, 0, 0, 0.2);
+		}
+
+		/* Z-index stacking for card sections (starting from section 2) */
+		.scroll-panel:nth-child(3) { z-index: 30; }  /* Skills */
+		.scroll-panel:nth-child(4) { z-index: 40; }  /* Projects */
+		.scroll-panel:nth-child(5) { z-index: 50; }  /* Timeline */
+		.scroll-panel:nth-child(6) { z-index: 60; }  /* Contact */
+		.scroll-panel:nth-child(7) { z-index: 70; }
+		.scroll-panel:nth-child(8) { z-index: 80; }
+
+		/* Ensure card sections have solid background */
+		.scroll-panel:nth-child(n+3) .section,
+		.scroll-panel:nth-child(n+3) .container {
+			background: var(--bg-primary);
+			border-top-left-radius: 20px;
+			border-top-right-radius: 20px;
+		}
+
+		/* Timeline section */
+		#timeline {
+			background: var(--bg-primary);
+			position: sticky;
+			top: 0;
+			box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
+			border-top-left-radius: 20px;
+			border-top-right-radius: 20px;
+		}
+
+		html.dark #timeline {
+			box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.3);
+		}
+
+		/* Ensure proper stacking for content visibility */
+		.scroll-panel .section {
+			position: relative;
+		}
 	}
 
 	/* Test animated ball for scroll progress */

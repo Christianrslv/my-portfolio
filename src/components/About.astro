@@ -19,8 +19,8 @@ const {
 } = Astro.props;
 ---
 
-<section id="about" class="section about w-full min-h-screen flex items-start lg:items-center lg:px-3">
-	<div class="flex justify-center lg:justify-end lg:basis-[60%] 4xl:basis-[50%]">
+<section id="about" class="section about w-full min-h-screen flex items-start lg:items-center !p-0">
+	<div class="about-container w-full lg:w-auto flex justify-center lg:justify-end lg:basis-[60%] 4xl:basis-[50%]">
     <div class="flex flex-col gap-8 lg:max-w-4xl 3xl:max-w-240 4xl:max-w-5xl">
       <SectionTitle number="01" title="About Me" class="flex justify-center lg:justify-start" />
       <div class="about-text flex flex-col gap-16">
@@ -43,6 +43,54 @@ const {
 </section>
 
 <style>
+	.about-container {
+		position: relative;
+		padding: 3rem 1rem;
+	}
+	
+	.about-container::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: transparent;
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+		-webkit-mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+		z-index: -1;
+	}
+	
+	@media (min-width: 480px) {
+		.about-container {
+			padding: 4rem 2rem;
+		}
+	}
+	
+	@media (min-width: 768px) {
+		.about-container {
+			padding: 5rem 3rem;
+		}
+	}
+	
+	@media (min-width: 1024px) {
+		.about-container {
+			padding: 5rem 4rem;
+		}
+		
+		.about-container::before {
+			backdrop-filter: none;
+			-webkit-backdrop-filter: none;
+			mask-image: none;
+			-webkit-mask-image: none;
+		}
+	}
+	
+	@media (min-width: 1280px) {
+		.about-container {
+			padding: 8rem 4rem;
+		}
+	}
+	
 	.about-paragraph {
 		color: #1e293b;
 	}
