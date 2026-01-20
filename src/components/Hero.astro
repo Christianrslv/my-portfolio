@@ -25,7 +25,7 @@ const {
 		<div class="hero-text">
 			<h1 class="hero-title">
 				<span class="greeting">{greeting}</span>
-				<span class="name">{name}</span>
+				<span class="name" data-animate-letters>{name}</span>
 				<span class="role">{role}</span>
 			</h1>
 			<p class="hero-description">{description}</p>
@@ -49,7 +49,7 @@ const {
 		justify-content: flex-start;
 		position: relative;
 		padding: 10rem 3rem 6rem;
-		overflow: hidden;
+		overflow: visible; /* Changed from hidden to see animation */
 		z-index: 1;
 	}
 
@@ -79,6 +79,7 @@ const {
 		gap: 4rem;
 		align-items: flex-start;
 		z-index: 1;
+		overflow: visible; /* Ensure animation is visible */
 	}
 
 	@media (max-width: 1024px) {
@@ -100,7 +101,8 @@ const {
 	}
 
 	.hero-text {
-		animation: fadeInUp 0.8s ease;
+		/* Removed fadeInUp to avoid conflict with letter animation */
+		overflow: visible; /* Ensure animation is visible */
 	}
 
 	.hero-title {
@@ -112,6 +114,7 @@ const {
 		display: flex;
 		flex-direction: column;
 		letter-spacing: -0.03em;
+		overflow: visible; /* Ensure animation is visible */
 	}
 
 	.greeting {
@@ -127,7 +130,21 @@ const {
 		color: var(--text-primary);
 		font-weight: 300;
 		margin-bottom: 0.5rem;
-		animation: fadeIn 0.8s ease 0.2s both;
+		display: inline-flex;
+		flex-wrap: wrap;
+		overflow: visible;
+	}
+
+	/* Letter spans - initial state set by JS, animation controlled by class */
+	.name .letter {
+		display: inline-block;
+		opacity: 0;
+		will-change: transform, opacity;
+	}
+
+	/* Preserve spaces */
+	.name .letter-space {
+		width: 0.35em;
 	}
 
 	.role {
@@ -269,5 +286,90 @@ const {
 		.hero-buttons {
 			justify-content: center;
 		}
+
+		.name {
+			justify-content: center;
+		}
 	}
 </style>
+
+<script is:inline>
+	// Direction: -1 = from top, 1 = from bottom
+	const LETTER_DIRECTION = 1;
+
+	function initLetterAnimation() {
+		const nameElement = document.querySelector('[data-animate-letters]');
+		if (!nameElement) return;
+
+		const text = nameElement.textContent?.trim() || '';
+		if (!text) return;
+
+		const offset = 30 * LETTER_DIRECTION;
+		
+		nameElement.innerHTML = '';
+		const words = text.split(' ');
+		const allSpans = [];
+
+		words.forEach((word, wordIndex) => {
+			// Create word wrapper to keep letters together
+			const wordWrapper = document.createElement('span');
+			wordWrapper.style.whiteSpace = 'nowrap';
+			wordWrapper.style.display = 'inline-block';
+
+			// Create letter spans for this word
+			word.split('').forEach((char) => {
+				const span = document.createElement('span');
+				span.className = 'letter';
+				span.textContent = char;
+				span.style.opacity = '0';
+				span.style.transform = `translateY(${offset}px)`;
+				span.style.filter = 'blur(8px)';
+				span.style.display = 'inline-block';
+				wordWrapper.appendChild(span);
+				allSpans.push(span);
+			});
+
+			nameElement.appendChild(wordWrapper);
+
+			// Add space between words (not after last word)
+			if (wordIndex < words.length - 1) {
+				const space = document.createElement('span');
+				space.className = 'letter letter-space';
+				space.innerHTML = '&nbsp;';
+				space.style.opacity = '0';
+				space.style.display = 'inline-block';
+				nameElement.appendChild(space);
+				allSpans.push(space);
+			}
+		});
+
+		const total = allSpans.length;
+		let cumulativeDelay = 400;
+		
+		allSpans.forEach((span, index) => {
+			const progress = index / Math.max(total - 1, 1);
+			const curve = 1 - Math.pow(1 - progress, 2);
+			
+			const letterDelay = 25 + (curve * 55);
+			const letterDuration = 45 + (curve * 105);
+			
+			cumulativeDelay += letterDelay;
+			
+			span.animate([
+				{ opacity: 0, transform: `translateY(${offset}px)`, filter: 'blur(8px)' },
+				{ opacity: 1, transform: 'translateY(0)', filter: 'blur(0px)' }
+			], {
+				duration: letterDuration,
+				delay: cumulativeDelay,
+				easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+				fill: 'forwards'
+			});
+		});
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initLetterAnimation);
+	} else {
+		setTimeout(initLetterAnimation, 10);
+	}
+</script>
