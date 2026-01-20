@@ -30,8 +30,15 @@ const {
 			</h1>
 			<p class="hero-description text-lg font-light text-slate-800 mb-12 max-w-xl leading-relaxed tracking-wide opacity-0 lg:text-xl xl:text-xl flex flex-col text-center lg:text-left">{description}</p>
 			<div class="hero-buttons">
-				<a href={primaryButton.href} class="btn btn-primary">{primaryButton.text}</a>
-				<a href={secondaryButton.href} class="btn btn-secondary">{secondaryButton.text}</a>
+				<a href={primaryButton.href} class="btn btn-primary">
+					<span class="btn-text">{primaryButton.text}</span>
+					<svg class="btn-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+						<path d="M5 12h14M13 6l6 6-6 6"/>
+					</svg>
+				</a>
+				<a href={secondaryButton.href} class="btn btn-secondary">
+					<span class="btn-text">{secondaryButton.text}</span>
+				</a>
 			</div>
 		</div>
 	</div>
@@ -117,48 +124,123 @@ const {
 
 	.hero-buttons {
 		display: flex;
-		gap: 1rem;
+		flex-direction: row;
+		gap: 2.5rem;
 		opacity: 0;
+		align-items: center;
+	}
+
+	@media (min-width: 1024px) {
+		.hero-buttons {
+			align-items: center;
+		}
 	}
 	
 	.hero.animate .hero-buttons {
 		animation: fadeIn 1.4s ease 0.8s both;
 	}
 
-	.btn {
-		padding: 0.875rem 2rem;
-		border-radius: 8px;
+	/* Override global button styles for hero */
+	.hero-buttons .btn {
 		text-decoration: none;
-		font-weight: 600;
+		font-family: inherit;
+		font-weight: 400;
+		font-size: 0.95rem;
+		letter-spacing: 0.02em;
 		transition: all 0.3s ease;
-		display: inline-block;
-		border: 1px solid transparent;
-	}
-
-	.btn-primary {
-		background: var(--accent-primary);
-		color: var(--bg-primary);
-		border-color: var(--accent-primary);
-		font-weight: 300;
-	}
-
-	.btn-primary:hover {
-		background: var(--accent-hover);
-		border-color: var(--accent-hover);
-		transform: translateY(-1px);
-	}
-
-	.btn-secondary {
-		background: transparent;
+		display: inline-flex;
+		align-items: center;
+		position: relative;
 		color: var(--text-primary);
-		border-color: var(--border-color);
-		font-weight: 300;
+		background: transparent !important;
+		border: none !important;
+		border-radius: 0 !important;
+		outline: none;
+		cursor: pointer;
+		padding: 0.5rem 0;
+		box-shadow: none !important;
 	}
 
-	.btn-secondary:hover {
-		background: var(--bg-tertiary);
-		border-color: var(--accent-primary);
-		color: var(--accent-primary);
+	/* Primary Button - Text with arrow */
+	.hero-buttons .btn-primary {
+		gap: 0.5rem;
+	}
+
+	.hero-buttons .btn-primary .btn-text {
+		position: relative;
+	}
+
+	.hero-buttons .btn-primary .btn-text::after {
+		content: '';
+		position: absolute;
+		bottom: -3px;
+		left: 0;
+		width: 100%;
+		height: 1px;
+		background: currentColor;
+		opacity: 0.35;
+		transition: opacity 0.3s ease;
+	}
+
+	.hero-buttons .btn-primary .btn-arrow {
+		opacity: 0.5;
+		transition: all 0.3s ease;
+	}
+
+	.hero-buttons .btn-primary:hover {
+		transform: none !important;
+		background: transparent !important;
+	}
+
+	.hero-buttons .btn-primary:hover .btn-text::after {
+		opacity: 0.7;
+	}
+
+	.hero-buttons .btn-primary:hover .btn-arrow {
+		opacity: 0.9;
+		transform: translateX(4px);
+	}
+
+	/* Secondary Button - Muted text */
+	.hero-buttons .btn-secondary {
+		color: var(--text-secondary);
+	}
+
+	.hero-buttons .btn-secondary .btn-text {
+		position: relative;
+	}
+
+	.hero-buttons .btn-secondary .btn-text::after {
+		content: '';
+		position: absolute;
+		bottom: -3px;
+		left: 0;
+		width: 0;
+		height: 1px;
+		background: currentColor;
+		transition: width 0.3s ease;
+	}
+
+	.hero-buttons .btn-secondary:hover {
+		color: var(--text-primary);
+		background: transparent !important;
+		transform: none !important;
+	}
+
+	.hero-buttons .btn-secondary:hover .btn-text::after {
+		width: 100%;
+	}
+
+	/* Mobile */
+	@media (max-width: 639px) {
+		.hero-buttons {
+			gap: 1.5rem;
+		}
+
+		.hero-buttons .btn {
+			padding: 0.625rem 0;
+			min-height: 44px;
+		}
 	}
 
 	.scroll-indicator {
