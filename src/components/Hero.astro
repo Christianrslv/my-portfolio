@@ -69,8 +69,12 @@ const {
 		font-size: 1.25rem;
 		font-weight: 300;
 		margin-bottom: 0.75rem;
-		animation: fadeIn 0.6s ease;
 		letter-spacing: 0.02em;
+		opacity: 0;
+	}
+	
+	.hero.animate .greeting {
+		animation: fadeIn 0.6s ease forwards;
 	}
 
 	.name {
@@ -109,7 +113,10 @@ const {
 		font-size: 1.5rem;
 		font-weight: 300;
 		margin-top: 0.5rem;
-		opacity: 0.8;
+		opacity: 0;
+	}
+	
+	.hero.animate .role {
 		animation: fadeIn 1s ease 0.4s both;
 	}
 
@@ -120,13 +127,21 @@ const {
 		margin-bottom: 3rem;
 		max-width: 600px;
 		line-height: 1.9;
-		animation: fadeIn 1.2s ease 0.6s both;
 		letter-spacing: 0.01em;
+		opacity: 0;
+	}
+	
+	.hero.animate .hero-description {
+		animation: fadeIn 1.2s ease 0.6s both;
 	}
 
 	.hero-buttons {
 		display: flex;
 		gap: 1rem;
+		opacity: 0;
+	}
+	
+	.hero.animate .hero-buttons {
 		animation: fadeIn 1.4s ease 0.8s both;
 	}
 
@@ -235,27 +250,26 @@ const {
 	// Direction: -1 = from top, 1 = from bottom
 	const LETTER_DIRECTION = 1;
 
-	function initLetterAnimation() {
+	function prepareLetterSpans() {
 		const nameElement = document.querySelector('[data-animate-letters]');
-		if (!nameElement) return;
+		if (!nameElement || nameElement.dataset.prepared) return null;
 
 		const text = nameElement.textContent?.trim() || '';
-		if (!text) return;
+		if (!text) return null;
 
 		const offset = 30 * LETTER_DIRECTION;
 		
 		nameElement.innerHTML = '';
+		nameElement.dataset.prepared = 'true';
 		const words = text.split(' ');
 		const allSpans = [];
 
 		words.forEach((word, wordIndex) => {
-			// Create word wrapper to keep letters together
 			const wordWrapper = document.createElement('span');
 			wordWrapper.style.whiteSpace = 'nowrap';
 			wordWrapper.style.display = 'inline-block';
 			wordWrapper.style.textAlign = 'center';
 
-			// Create letter spans for this word
 			word.split('').forEach((char) => {
 				const span = document.createElement('span');
 				span.className = 'letter';
@@ -270,7 +284,6 @@ const {
 
 			nameElement.appendChild(wordWrapper);
 
-			// Add space between words (not after last word)
 			if (wordIndex < words.length - 1) {
 				const space = document.createElement('span');
 				space.className = 'letter letter-space';
@@ -282,8 +295,12 @@ const {
 			}
 		});
 
+		return { allSpans, offset };
+	}
+
+	function animateLetters(allSpans, offset) {
 		const total = allSpans.length;
-		let cumulativeDelay = 400;
+		let cumulativeDelay = 200; // Reduced since preloader already provides delay
 		
 		allSpans.forEach((span, index) => {
 			const progress = index / Math.max(total - 1, 1);
@@ -306,9 +323,49 @@ const {
 		});
 	}
 
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', initLetterAnimation);
-	} else {
-		setTimeout(initLetterAnimation, 10);
+	// Prepare letter spans immediately (so layout is correct)
+	let letterData = null;
+	
+	function init() {
+		letterData = prepareLetterSpans();
 	}
+
+	// Wait for siteready event (after preloader) to animate
+	function startAnimation() {
+		if (letterData) {
+			animateLetters(letterData.allSpans, letterData.offset);
+		}
+	}
+
+	// Initialize spans when DOM is ready
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
+	}
+
+	// Start all hero animations
+	function startAllAnimations() {
+		// Add animate class to trigger CSS animations
+		const hero = document.querySelector('.hero');
+		if (hero) {
+			hero.classList.add('animate');
+		}
+		
+		// Start letter animation
+		if (letterData) {
+			animateLetters(letterData.allSpans, letterData.offset);
+		}
+	}
+
+	// Wait for siteready event (after preloader) to animate
+	window.addEventListener('siteready', startAllAnimations);
+	
+	// Fallback: if siteready doesn't fire within 3s, start anyway
+	setTimeout(() => {
+		const hero = document.querySelector('.hero');
+		if (hero && !hero.classList.contains('animate')) {
+			startAllAnimations();
+		}
+	}, 3000);
 </script>

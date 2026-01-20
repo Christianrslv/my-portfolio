@@ -11,21 +11,220 @@ import '../styles/global.css';
 		<meta name="generator" content={Astro.generator} />
 		<meta name="description" content="Modern portfolio showcasing my work and skills" />
 		<title>Portfolio</title>
+		<!-- Preconnect to external resources -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+		<!-- Preload critical fonts -->
+		<link rel="preload" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@300;400&family=Inter:wght@200;300;400&family=JetBrains+Mono:wght@400&display=swap" as="style" />
 		<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@300;400&family=Inter:wght@200;300;400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
 		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+		<!-- Inline critical preloader styles to avoid FOUC -->
+		<style>
+			.preloader {
+				position: fixed;
+				inset: 0;
+				z-index: 99999;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				background: linear-gradient(135deg, #f8fbfd 0%, #e8f4fc 50%, #d4e9f7 100%);
+				transition: opacity 0.6s ease, visibility 0.6s ease;
+			}
+			html.dark .preloader {
+				background: linear-gradient(135deg, #0a1628 0%, #0f172a 50%, #131d32 100%);
+			}
+			.preloader.hidden {
+				opacity: 0;
+				visibility: hidden;
+				pointer-events: none;
+			}
+			.preloader-content {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 2rem;
+			}
+			.preloader-logo {
+				font-family: 'Libre Baskerville', Georgia, serif;
+				font-size: clamp(1.5rem, 4vw, 2.5rem);
+				font-weight: 300;
+				color: #1a3a52;
+				letter-spacing: -0.02em;
+				opacity: 0;
+				transform: translateY(20px);
+				animation: fadeInUp 0.8s ease forwards;
+			}
+			html.dark .preloader-logo {
+				color: #e2e8f0;
+			}
+			.preloader-line {
+				width: 120px;
+				height: 2px;
+				background: #d4e5f0;
+				border-radius: 1px;
+				overflow: hidden;
+				position: relative;
+			}
+			html.dark .preloader-line {
+				background: #1e293b;
+			}
+			.preloader-line::after {
+				content: '';
+				position: absolute;
+				left: 0;
+				top: 0;
+				height: 100%;
+				width: 40%;
+				background: linear-gradient(90deg, #b5d4e8, #8fbdd9);
+				border-radius: 1px;
+				animation: loading 1.2s ease-in-out infinite;
+			}
+			html.dark .preloader-line::after {
+				background: linear-gradient(90deg, #60a5fa, #3b82f6);
+			}
+			.preloader-text {
+				font-family: 'Inter', sans-serif;
+				font-size: 0.75rem;
+				font-weight: 300;
+				color: #7a9bb5;
+				letter-spacing: 0.15em;
+				text-transform: uppercase;
+				opacity: 0;
+				animation: fadeIn 0.6s ease 0.3s forwards;
+			}
+			html.dark .preloader-text {
+				color: #64748b;
+			}
+			@keyframes loading {
+				0% { transform: translateX(-100%); }
+				50% { transform: translateX(150%); }
+				100% { transform: translateX(350%); }
+			}
+			@keyframes fadeInUp {
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+			@keyframes fadeIn {
+				to { opacity: 1; }
+			}
+			/* Hide main content until loaded */
+			.main-content {
+				opacity: 0;
+				transition: opacity 0.5s ease;
+			}
+			.main-content.visible {
+				opacity: 1;
+			}
+		</style>
 	</head>
 	<body>
-		<slot />
+		<!-- Preloader -->
+		<div class="preloader" id="preloader">
+			<div class="preloader-content">
+				<div class="preloader-logo">CR</div>
+				<div class="preloader-line"></div>
+				<div class="preloader-text">Loading</div>
+			</div>
+		</div>
+		
+		<!-- Main Content -->
+		<div class="main-content" id="main-content">
+			<slot />
+		</div>
 	</body>
 </html>
 
 <script is:inline>
+	// Apply theme immediately to avoid flash
 	const storedTheme = localStorage.getItem('theme');
 	if (storedTheme === 'dark') {
 		document.documentElement.classList.add('dark');
 	}
+
+	// Preloader logic
+	(function() {
+		const preloader = document.getElementById('preloader');
+		const mainContent = document.getElementById('main-content');
+		
+		// Resources to wait for
+		const resourcesToLoad = [];
+		
+		// Wait for fonts
+		if (document.fonts) {
+			resourcesToLoad.push(document.fonts.ready);
+		}
+		
+		// Wait for background image if present
+		function preloadBackgroundImage() {
+			return new Promise((resolve) => {
+				const bgElement = document.querySelector('[data-background-image]');
+				const bgUrl = bgElement?.dataset.backgroundImage;
+				
+				if (bgUrl) {
+					const img = new Image();
+					img.onload = resolve;
+					img.onerror = resolve; // Continue even if image fails
+					img.src = bgUrl;
+				} else {
+					resolve();
+				}
+			});
+		}
+		
+		// Wait for DOM content
+		function waitForDOMContent() {
+			return new Promise((resolve) => {
+				if (document.readyState === 'complete') {
+					resolve();
+				} else {
+					window.addEventListener('load', resolve);
+				}
+			});
+		}
+		
+		// Minimum display time for preloader (for smooth UX)
+		function minimumDelay(ms) {
+			return new Promise((resolve) => setTimeout(resolve, ms));
+		}
+		
+		// Hide preloader and show content
+		function hidePreloader() {
+			if (preloader) {
+				preloader.classList.add('hidden');
+			}
+			if (mainContent) {
+				mainContent.classList.add('visible');
+			}
+			
+			// Dispatch custom event for components that need to wait
+			window.dispatchEvent(new CustomEvent('siteready'));
+		}
+		
+		// Wait for all resources
+		Promise.all([
+			waitForDOMContent(),
+			preloadBackgroundImage(),
+			...resourcesToLoad,
+			minimumDelay(800) // Minimum 800ms to show preloader smoothly
+		]).then(() => {
+			// Small additional delay for smoother transition
+			setTimeout(hidePreloader, 100);
+		}).catch(() => {
+			// Fallback: show content anyway after timeout
+			setTimeout(hidePreloader, 2000);
+		});
+		
+		// Failsafe: always hide preloader after 5 seconds max
+		setTimeout(() => {
+			if (preloader && !preloader.classList.contains('hidden')) {
+				hidePreloader();
+			}
+		}, 5000);
+	})();
 </script>
 
 <style is:global>
