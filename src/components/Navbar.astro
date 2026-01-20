@@ -15,6 +15,7 @@ const { logo = 'Portfolio', links = [
 ] } = Astro.props;
 ---
 
+<!-- Desktop navbar -->
 <nav class="navbar fixed top-0 left-0 right-0 z-[2000] bg-[rgba(250,250,250,0.35)] dark:bg-[rgba(15,23,42,0.35)] backdrop-blur-[20px] border-b transition-all duration-200 hidden lg:block">
 	<div class="w-full px-12 py-6 lg:px-8 xl:px-12 flex justify-between items-center">
 		<a href="#home" class="nav-logo font-serif text-xl font-normal no-underline transition-colors duration-200 tracking-wide">{logo}</a>
@@ -29,30 +30,85 @@ const { logo = 'Portfolio', links = [
 	</div>
 </nav>
 
-<!-- Mobile floating menu button -->
-<button id="mobile-menu-button" class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[rgba(250,250,250,0.2)] dark:bg-[rgba(15,23,42,0.2)] backdrop-blur-[20px] border border-white/10 dark:border-white/5 z-[2000] cursor-pointer flex items-center justify-center transition-all duration-300 shadow-lg dark:shadow-lg/30 hover:bg-[rgba(250,250,250,0.3)] dark:hover:bg-[rgba(15,23,42,0.3)] hover:scale-105 lg:hidden" aria-label="Toggle menu">
-	<svg class="menu-icon w-6 h-6 transition-all duration-300 absolute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-		<line x1="3" y1="6" x2="21" y2="6"></line>
-		<line x1="3" y1="12" x2="21" y2="12"></line>
-		<line x1="3" y1="18" x2="21" y2="18"></line>
-	</svg>
-	<svg class="close-icon w-6 h-6 transition-all duration-300 absolute opacity-0 rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-		<line x1="18" y1="6" x2="6" y2="18"></line>
-		<line x1="6" y1="6" x2="18" y2="18"></line>
-	</svg>
-</button>
-
-<!-- Mobile expanded menu -->
-<div id="mobile-menu" class="fixed bottom-0 left-0 right-0 bg-[rgba(250,250,250,0.2)] dark:bg-[rgba(15,23,42,0.2)] backdrop-blur-[20px] border-t border-white/10 dark:border-white/5 z-[1999] translate-y-full transition-transform duration-300 ease-out max-h-[80vh] overflow-y-auto lg:hidden">
-	<div class="px-6 py-8 pb-[calc(1.5rem+56px+1.5rem)]">
-		<ul class="flex flex-col gap-6 list-none m-0 p-0">
+<!-- Mobile menu with Alpine.js - horizontal expansion -->
+<div x-data="{ open: false }" class="lg:hidden fixed bottom-6 right-6 z-[2000]">
+	<!-- Container that expands horizontally -->
+	<div 
+		class="flex items-center justify-end h-14 rounded-full bg-[rgba(250,250,250,0.2)] dark:bg-[rgba(15,23,42,0.2)] backdrop-blur-[20px] border border-white/10 dark:border-white/5 shadow-lg transition-all duration-300 ease-out overflow-hidden"
+		:class="open ? 'w-auto pl-4 pr-1' : 'w-14'"
+	>
+		<!-- Menu items - shown when open -->
+		<div 
+			x-show="open"
+			x-transition:enter="transition ease-out duration-300"
+			x-transition:enter-start="opacity-0 -translate-x-4"
+			x-transition:enter-end="opacity-100 translate-x-0"
+			x-transition:leave="transition ease-in duration-200"
+			x-transition:leave-start="opacity-100 translate-x-0"
+			x-transition:leave-end="opacity-0 -translate-x-4"
+			class="flex items-center gap-4 pr-2"
+		>
 			{links.map((link) => (
-				<li><a href={link.href} class="mobile-nav-link block no-underline font-light text-lg py-3 transition-colors duration-200 relative">{link.label}</a></li>
+				<a 
+					href={link.href} 
+					@click="open = false"
+					class="mobile-nav-link whitespace-nowrap no-underline font-light text-sm transition-colors duration-200"
+				>
+					{link.label}
+				</a>
 			))}
-		</ul>
-		<div class="mt-8 pt-8 border-t border-white/10 dark:border-white/5 flex justify-center">
-			<ThemeToggle />
+			<div class="border-l border-white/10 dark:border-white/5 pl-3 ml-1">
+				<ThemeToggle />
+			</div>
 		</div>
+
+		<!-- Toggle button -->
+		<button 
+			type="button" 
+			@click="open = !open"
+			@click.outside="open = false"
+			:aria-expanded="open"
+			class="w-14 h-14 flex-shrink-0 rounded-full cursor-pointer flex items-center justify-center transition-all duration-200 hover:bg-white/10 dark:hover:bg-white/5" 
+			aria-label="Toggle menu"
+		>
+			<!-- Hamburger icon -->
+			<svg 
+				x-show="!open" 
+				x-transition:enter="transition ease-out duration-200"
+				x-transition:enter-start="opacity-0 rotate-90"
+				x-transition:enter-end="opacity-100 rotate-0"
+				x-transition:leave="transition ease-in duration-150"
+				x-transition:leave-start="opacity-100 rotate-0"
+				x-transition:leave-end="opacity-0 rotate-90"
+				class="w-6 h-6 absolute" 
+				viewBox="0 0 24 24" 
+				fill="none" 
+				stroke="currentColor" 
+				stroke-width="2"
+			>
+				<line x1="3" y1="6" x2="21" y2="6"></line>
+				<line x1="3" y1="12" x2="21" y2="12"></line>
+				<line x1="3" y1="18" x2="21" y2="18"></line>
+			</svg>
+			<!-- Close icon -->
+			<svg 
+				x-show="open" 
+				x-transition:enter="transition ease-out duration-200"
+				x-transition:enter-start="opacity-0 rotate-90"
+				x-transition:enter-end="opacity-100 rotate-0"
+				x-transition:leave="transition ease-in duration-150"
+				x-transition:leave-start="opacity-100 rotate-0"
+				x-transition:leave-end="opacity-0 rotate-90"
+				class="w-6 h-6 absolute" 
+				viewBox="0 0 24 24" 
+				fill="none" 
+				stroke="currentColor" 
+				stroke-width="2"
+			>
+				<line x1="18" y1="6" x2="6" y2="18"></line>
+				<line x1="6" y1="6" x2="18" y2="18"></line>
+			</svg>
+		</button>
 	</div>
 </div>
 
@@ -93,112 +149,16 @@ const { logo = 'Portfolio', links = [
 		width: 100%;
 	}
 
-	#mobile-menu-button .menu-icon,
-	#mobile-menu-button .close-icon {
+	/* Mobile menu button icons */
+	[x-data] button svg {
 		color: var(--text-primary);
 	}
 
 	.mobile-nav-link {
-		color: var(--text-primary);
-	}
-
-	/* Mobile nav link underline animation */
-	.mobile-nav-link::after {
-		content: '';
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		width: 0;
-		height: 2px;
-		background: var(--accent-primary);
-		transition: width 0.2s ease;
+		color: var(--text-secondary);
 	}
 
 	.mobile-nav-link:hover {
-		color: var(--accent-primary);
-	}
-
-	.mobile-nav-link:hover::after {
-		width: 100%;
-	}
-
-	/* Mobile menu button active state */
-	#mobile-menu-button.active .menu-icon {
-		opacity: 0;
-		transform: rotate(90deg);
-	}
-
-	#mobile-menu-button.active .close-icon {
-		opacity: 1;
-		transform: rotate(0deg);
-	}
-
-	/* Mobile menu active state */
-	#mobile-menu.active {
-		transform: translateY(0);
+		color: var(--text-primary);
 	}
 </style>
-
-<script>
-	// Navbar background on scroll (desktop only)
-	window.addEventListener('scroll', () => {
-		const navbar = document.querySelector('nav');
-		if (!navbar || window.innerWidth <= 1024) return;
-		
-		const isDark = document.documentElement.classList.contains('dark');
-		const currentScroll = window.pageYOffset;
-
-		if (isDark) {
-			if (currentScroll > 100) {
-				navbar.style.background = 'rgba(15, 23, 42, 0.95)';
-			} else {
-				navbar.style.background = 'rgba(15, 23, 42, 0.8)';
-			}
-		} else {
-			if (currentScroll > 100) {
-				navbar.style.background = 'rgba(250, 250, 250, 0.95)';
-			} else {
-				navbar.style.background = 'rgba(250, 250, 250, 0.8)';
-			}
-		}
-	});
-
-	// Mobile menu toggle
-	document.addEventListener('DOMContentLoaded', () => {
-		const menuButton = document.getElementById('mobile-menu-button');
-		const mobileMenu = document.getElementById('mobile-menu');
-		const mobileLinks = document.querySelectorAll('.mobile-nav-link');
-
-		if (!menuButton || !mobileMenu) return;
-
-		menuButton.addEventListener('click', () => {
-			const isActive = menuButton.classList.toggle('active');
-			mobileMenu.classList.toggle('active');
-			
-			// Prevent body scroll when menu is open
-			if (isActive) {
-				document.body.style.overflow = 'hidden';
-			} else {
-				document.body.style.overflow = '';
-			}
-		});
-
-		// Close menu when clicking a link
-		mobileLinks.forEach(link => {
-			link.addEventListener('click', () => {
-				menuButton.classList.remove('active');
-				mobileMenu.classList.remove('active');
-				document.body.style.overflow = '';
-			});
-		});
-
-		// Close menu when clicking outside
-		mobileMenu.addEventListener('click', (e) => {
-			if (e.target === mobileMenu) {
-				menuButton.classList.remove('active');
-				mobileMenu.classList.remove('active');
-				document.body.style.overflow = '';
-			}
-		});
-	});
-</script>
