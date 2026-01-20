@@ -1147,14 +1147,15 @@ console.log('[Index] About showImage:', config.about.showImage);
 			background: transparent !important;
 		}
 
-		/* ========== SECTION 1 (About) - Original behavior with background ========== */
+		/* ========== SECTION 1 (About) - Sticky behavior with tolerance ========== */
 		.scroll-panel#about,
 		.scroll-panel:nth-child(2) {
 			background: transparent;
-			position: relative;
+			position: sticky;
+			top: 0;
 			z-index: 11;
-			/* Add scroll tolerance - extra padding at bottom before next section */
-			padding-bottom: 30vh;
+			/* Tolerance area - extra height for scrolling before next section covers */
+			margin-bottom: 30vh;
 		}
 
 		.scroll-panel#about .section,
