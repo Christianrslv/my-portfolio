@@ -10,73 +10,275 @@ interface Project {
 	codeUrl?: string;
 }
 
+interface ProjectCategory {
+	id: string;
+	label: string;
+	projects: Project[];
+}
+
 interface Props {
-	projects?: Project[];
+	categories?: ProjectCategory[];
 }
 
 const {
-	projects = [
+	categories = [
 		{
-			title: "Project Name",
-			description: "A modern web application built with cutting-edge technologies. Features include real-time updates, responsive design, and seamless user experience.",
-			technologies: ["React", "TypeScript", "Node.js"],
-			projectUrl: "#",
-			codeUrl: "#",
+			id: "work",
+			label: "Work",
+			projects: [
+				{
+					title: "E-Commerce Store",
+					description: "A high-converting Shopify store with custom theme development, optimized checkout flow, and seamless integrations.",
+					technologies: ["Shopify", "Liquid", "JavaScript"],
+					projectUrl: "#",
+					codeUrl: "#",
+				},
+				{
+					title: "Brand Website",
+					description: "Custom Shopify storefront with unique design system, advanced filtering, and performance optimization.",
+					technologies: ["Shopify", "Tailwind", "Alpine.js"],
+					projectUrl: "#",
+					codeUrl: "#",
+				},
+				{
+					title: "Multi-region Store",
+					description: "International e-commerce platform with multi-currency support, localization, and custom apps.",
+					technologies: ["Shopify Plus", "React", "Node.js"],
+					projectUrl: "#",
+					codeUrl: "#",
+				},
+			],
 		},
 		{
-			title: "Project Name",
-			description: "An innovative solution that solves real-world problems with elegant code and intuitive design. Built for scalability and performance.",
-			technologies: ["Next.js", "PostgreSQL", "Tailwind"],
-			projectUrl: "#",
-			codeUrl: "#",
+			id: "ventures",
+			label: "Ventures",
+			projects: [
+				{
+					title: "SaaS Platform",
+					description: "A collaborative project building a modern SaaS application with subscription management and analytics dashboard.",
+					technologies: ["Next.js", "PostgreSQL", "Stripe"],
+					projectUrl: "#",
+					codeUrl: "#",
+				},
+				{
+					title: "Mobile App",
+					description: "Cross-platform mobile application developed independently, featuring real-time sync and offline support.",
+					technologies: ["React Native", "Firebase", "TypeScript"],
+					projectUrl: "#",
+					codeUrl: "#",
+				},
+			],
 		},
 		{
-			title: "Project Name",
-			description: "A full-stack application showcasing modern development practices. Includes authentication, database integration, and API development.",
-			technologies: ["Vue.js", "Python", "MongoDB"],
-			projectUrl: "#",
-			codeUrl: "#",
+			id: "playground",
+			label: "Playground",
+			projects: [
+				{
+					title: "Creative Experiment",
+					description: "An interactive art piece exploring generative design and creative coding techniques.",
+					technologies: ["Three.js", "GLSL", "Canvas"],
+					projectUrl: "#",
+					codeUrl: "#",
+				},
+				{
+					title: "Open Source Tool",
+					description: "A developer utility built for fun that ended up helping the community. Contributions welcome!",
+					technologies: ["Rust", "CLI", "GitHub Actions"],
+					projectUrl: "#",
+					codeUrl: "#",
+				},
+				{
+					title: "Game Prototype",
+					description: "A weekend game jam project exploring procedural generation and pixel art aesthetics.",
+					technologies: ["Godot", "GDScript", "Aseprite"],
+					projectUrl: "#",
+					codeUrl: "#",
+				},
+			],
 		},
 	],
 } = Astro.props;
 ---
 
-<section id="projects" class="section projects">
-	<div class="container">
+<section id="projects" class="container projects min-h-screen w-full flex">
+	<div class="w-full flex flex-col items-center gap-14">
 		<SectionTitle number="03" title="Featured Projects" />
-		<div class="projects-grid">
-			{projects.map((project) => (
-				<ProjectCard {...project} />
-			))}
-		</div>
+		<div class="flex flex-col items-center lg:justify-center gap-4">
+      <!-- Tabs -->
+      <div class="project-tabs" role="tablist">
+        {categories.map((category, index) => (
+          <button
+            class={`project-tab ${index === 0 ? 'active' : ''}`}
+            role="tab"
+            aria-selected={index === 0 ? 'true' : 'false'}
+            aria-controls={`panel-${category.id}`}
+            data-tab={category.id}
+          >
+            {category.label}
+          </button>
+        ))}
+      </div>
+
+      <!-- Tab Panels -->
+      <div class="project-panels">
+        {categories.map((category, index) => (
+          <div
+            id={`panel-${category.id}`}
+            class={`project-panel ${index === 0 ? 'active' : ''}`}
+            role="tabpanel"
+            aria-hidden={index === 0 ? 'false' : 'true'}
+            data-panel={category.id}
+          >
+            <div class="projects-grid">
+              {category.projects.map((project) => (
+                <ProjectCard {...project} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
 	</div>
 </section>
 
 <style>
+	.project-tabs {
+		display: flex;
+		gap: 0.5rem;
+		padding: 0.375rem;
+		background: rgba(255, 255, 255, 0.25);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		border-radius: 100px;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+	}
+
+	html.dark .project-tabs {
+		background: rgba(30, 41, 59, 0.4);
+		border-color: rgba(148, 163, 184, 0.2);
+	}
+
+	.project-tab {
+		padding: 0.75rem 1.5rem;
+		border: none;
+		background: transparent;
+		color: var(--text-secondary);
+		font-family: inherit;
+		font-size: 0.9rem;
+		font-weight: 400;
+		letter-spacing: 0.02em;
+		cursor: pointer;
+		border-radius: 100px;
+		transition: all 0.3s ease;
+		position: relative;
+	}
+
+	.project-tab:hover {
+		color: var(--text-primary);
+	}
+
+	.project-tab.active {
+		background: rgba(255, 255, 255, 0.6);
+		color: var(--text-primary);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	}
+
+	html.dark .project-tab.active {
+		background: rgba(30, 41, 59, 0.8);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	}
+
+	.project-panels {
+		width: 100%;
+		position: relative;
+	}
+
+	.project-panel {
+		display: none;
+		animation: fadeIn 0.4s ease;
+	}
+
+	.project-panel.active {
+		display: block;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
 	.projects-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-		gap: 2rem;
+		grid-template-columns: 1fr;
+		gap: 1.5rem;
+		width: 100%;
+		max-width: 1200px;
+		margin: 0 auto;
 	}
 
-	@media (min-width: 1024px) {
-		.projects-grid {
-			grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-			gap: 2.5rem;
+	/* Mobile (≤1024px) */
+	@media (max-width: 1024px) {
+		.project-tabs {
+			gap: 0.25rem;
+			padding: 0.25rem;
+		}
+
+		.project-tab {
+			padding: 0.625rem 1rem;
+			font-size: 0.85rem;
 		}
 	}
 
-	@media (min-width: 1536px) {
+	/* Desktop (>1024px) */
+	@media (min-width: 1025px) {
 		.projects-grid {
-			grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-			gap: 3rem;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.projects-grid {
-			grid-template-columns: 1fr;
-			gap: 1.5rem;
+			grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 		}
 	}
 </style>
+
+<script>
+	function initProjectTabs() {
+		const tabs = document.querySelectorAll('.project-tab');
+		const panels = document.querySelectorAll('.project-panel');
+
+		tabs.forEach((tab) => {
+			tab.addEventListener('click', () => {
+				const targetId = tab.getAttribute('data-tab');
+
+				// Update tabs
+				tabs.forEach((t) => {
+					t.classList.remove('active');
+					t.setAttribute('aria-selected', 'false');
+				});
+				tab.classList.add('active');
+				tab.setAttribute('aria-selected', 'true');
+
+				// Update panels
+				panels.forEach((panel) => {
+					const panelId = panel.getAttribute('data-panel');
+					if (panelId === targetId) {
+						panel.classList.add('active');
+						panel.setAttribute('aria-hidden', 'false');
+					} else {
+						panel.classList.remove('active');
+						panel.setAttribute('aria-hidden', 'true');
+					}
+				});
+			});
+		});
+	}
+
+	// Initialize on load
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initProjectTabs);
+	} else {
+		initProjectTabs();
+	}
+</script>

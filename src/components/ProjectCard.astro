@@ -5,12 +5,13 @@ interface Props {
 	technologies: string[];
 	projectUrl?: string;
 	codeUrl?: string;
+	class?: string;
 }
 
-const { title, description, technologies, projectUrl = "#", codeUrl = "#" } = Astro.props;
+const { title, description, technologies, projectUrl = "#", codeUrl = "#", class: className } = Astro.props;
 ---
 
-<article class="project-card">
+<article class={`project-card ${className}`}>
 	<div class="project-image">
 		<div class="project-gradient"></div>
 		<div class="project-overlay">
