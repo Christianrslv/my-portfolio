@@ -695,12 +695,44 @@ console.log('[Index] About showImage:', config.about.showImage);
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background: #FFFFFF;
+		background: linear-gradient(
+			135deg,
+			#a8cce3 0%,
+			#b5d4e8 20%,
+			#d4e9f2 40%,
+			#c8e0ed 60%,
+			#b5d4e8 80%,
+			#a8cce3 100%
+		);
+		background-size: 300% 300%;
+		animation: baseGradientShift 12s ease-in-out infinite;
 		z-index: 0;
 	}
 
 	html.dark .base-background {
-		background: #0F172A;
+		background: linear-gradient(
+			135deg,
+			#070d17 0%,
+			#0a1628 20%,
+			#131d32 40%,
+			#0f172a 60%,
+			#0a1628 80%,
+			#070d17 100%
+		);
+		background-size: 300% 300%;
+		animation: baseGradientShift 12s ease-in-out infinite;
+	}
+
+	@keyframes baseGradientShift {
+		0% {
+			background-position: 0% 0%;
+		}
+		50% {
+			background-position: 100% 100%;
+		}
+		100% {
+			background-position: 0% 0%;
+		}
 	}
 
 	/* Background image layer - on top of base background */
@@ -1044,15 +1076,20 @@ console.log('[Index] About showImage:', config.about.showImage);
 		pointer-events: none;
 		opacity: 0;
 		transition: opacity 0.3s ease;
-		/* 5-stop gradient for smoother transitions (intermediate stops default to adjacent values if not set) */
+		/* Uses deeper blue (#a8cce3 = 168, 204, 227) for all stops */
+		--overlay-gradient-color: 168, 204, 227;
 		background: linear-gradient(
 			var(--grad-direction),
-			rgba(var(--overlay-color), var(--grad-opacity-start)) var(--grad-stop-1),
-			rgba(var(--overlay-color), var(--grad-opacity-1a, var(--grad-opacity-start))) var(--grad-stop-1a, var(--grad-stop-1)),
-			rgba(var(--overlay-color), var(--grad-opacity-mid)) var(--grad-stop-2),
-			rgba(var(--overlay-color), var(--grad-opacity-2a, var(--grad-opacity-mid))) var(--grad-stop-2a, var(--grad-stop-2)),
-			rgba(var(--overlay-color), var(--grad-opacity-end)) var(--grad-stop-3)
+			rgba(var(--overlay-gradient-color), var(--grad-opacity-start)) var(--grad-stop-1),
+			rgba(var(--overlay-gradient-color), var(--grad-opacity-1a, var(--grad-opacity-start))) var(--grad-stop-1a, var(--grad-stop-1)),
+			rgba(var(--overlay-gradient-color), var(--grad-opacity-mid)) var(--grad-stop-2),
+			rgba(var(--overlay-gradient-color), var(--grad-opacity-2a, var(--grad-opacity-mid))) var(--grad-stop-2a, var(--grad-stop-2)),
+			rgba(var(--overlay-gradient-color), var(--grad-opacity-end)) var(--grad-stop-3)
 		);
+	}
+
+	html.dark .overlay-gradient {
+		--overlay-gradient-color: 7, 13, 23;
 	}
 
 
