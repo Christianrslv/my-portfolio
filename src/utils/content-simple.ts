@@ -28,6 +28,7 @@ export async function getPortfolioContentSimple() {
 				technologies: file.frontmatter.technologies || [],
 				projectUrl: file.frontmatter.projectUrl || '#',
 				codeUrl: file.frontmatter.codeUrl || '#',
+				category: file.frontmatter.category,
 			}))
 			.filter((p: any) => p.title);
 

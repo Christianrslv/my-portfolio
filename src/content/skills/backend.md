@@ -1,4 +1,4 @@
 ---
 title: "Backend"
-skills: ["Node.js", "Python", "PostgreSQL", "MongoDB", "GraphQL", "REST APIs"]
+skills: ["Node.js", "GraphQL", "PostgreSQL", "Java", "REST APIs"]
 ---

@@ -6,7 +6,7 @@ export interface TimelineEntry {
 	title: string;
 	date: string;
 	category: string;
-	icon: string;
+	icon?: string;
 	Content: any;
 	slug: string;
 }
@@ -37,7 +37,7 @@ export async function getTimelineEntries(): Promise<TimelineEntry[]> {
 			title: entry.frontmatter.title,
 			date: date,
 			category: entry.frontmatter.category,
-			icon: entry.frontmatter.icon,
+			icon: entry.frontmatter.icon || '',
 			Content: entry.Content,
 			slug: slug,
 		});

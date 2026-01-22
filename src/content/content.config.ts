@@ -36,6 +36,7 @@ const projects = defineCollection({
 		codeUrl: z.string().optional(),
 		image: z.string().optional(),
 		featured: z.boolean().optional().default(false),
+		category: z.string().optional(), // Category for grouping projects (work, ventures, playground)
 	}),
 });
 

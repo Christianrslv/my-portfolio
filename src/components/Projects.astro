@@ -8,6 +8,7 @@ interface Project {
 	technologies: string[];
 	projectUrl?: string;
 	codeUrl?: string;
+	category?: string;
 }
 
 interface ProjectCategory {
@@ -18,9 +19,50 @@ interface ProjectCategory {
 
 interface Props {
 	categories?: ProjectCategory[];
+	projects?: Project[]; // Flat array from markdown files with category field
 }
 
-const {
+const { categories: propCategories, projects: propProjects } = Astro.props;
+
+// Determine which format we received and normalize to categories
+let categories: ProjectCategory[];
+
+if (propCategories && propCategories.length > 0) {
+	// Already in categories format (legacy support)
+	categories = propCategories;
+} else if (propProjects && Array.isArray(propProjects) && propProjects.length > 0) {
+	// Flat array from markdown files - group by category
+	const projectsByCategory = new Map<string, Project[]>();
+
+	propProjects.forEach((project) => {
+		const categoryId = project.category || 'uncategorized';
+		if (!projectsByCategory.has(categoryId)) {
+			projectsByCategory.set(categoryId, []);
+		}
+		projectsByCategory.get(categoryId)!.push(project);
+	});
+
+	// Convert map to categories array with proper labels
+	categories = Array.from(projectsByCategory.entries()).map(([id, projects]) => ({
+		id,
+		label: id.charAt(0).toUpperCase() + id.slice(1), // Capitalize category name
+		projects,
+	}));
+
+	// Sort categories in specific order: Work, Ventures, Playground
+	const categoryOrder = ['work', 'ventures', 'playground'];
+	categories.sort((a, b) => {
+		const aIndex = categoryOrder.indexOf(a.id);
+		const bIndex = categoryOrder.indexOf(b.id);
+
+		// If category not in order array, put it at the end
+		if (aIndex === -1) return 1;
+		if (bIndex === -1) return -1;
+
+		return aIndex - bIndex;
+	});
+} else {
+	// Fallback to default categories
 	categories = [
 		{
 			id: "work",
@@ -96,16 +138,18 @@ const {
 				},
 			],
 		},
-	],
-} = Astro.props;
+	];
+}
 ---
 
-<section id="projects" class="container projects min-h-screen w-full flex">
-	<div class="w-full flex flex-col items-center gap-14">
-		<SectionTitle number="03" title="Featured Projects" />
-		<div class="flex flex-col items-center lg:justify-center gap-4">
+<section id="projects" class="container projects min-h-screen max-h-screen w-full flex max-lg:pb-0!">
+	<div class="w-full flex flex-col items-center gap-4 lg:gap-14 min-h-0 flex-1">
+		<div class="shrink-0">
+			<SectionTitle number="03" title="Featured Projects" />
+		</div>
+		<div class="flex flex-col items-center lg:justify-center gap-4 flex-1 min-h-0 w-full relative">
       <!-- Tabs -->
-      <div class="project-tabs" role="tablist">
+      <div class="project-tabs shrink-0 absolute bottom-4 left-1/2 -translate-x-1/2 z-90" role="tablist">
         {categories.map((category, index) => (
           <button
             class={`project-tab ${index === 0 ? 'active' : ''}`}
@@ -129,7 +173,7 @@ const {
             aria-hidden={index === 0 ? 'false' : 'true'}
             data-panel={category.id}
           >
-            <div class="projects-grid">
+            <div class="projects-grid max-lg:pb-28">
               {category.projects.map((project) => (
                 <ProjectCard {...project} />
               ))}
@@ -142,6 +186,19 @@ const {
 </section>
 
 <style>
+  .project-panels {
+    width: 100%;
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .project-panels::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 	.project-tabs {
 		display: flex;
 		gap: 0.5rem;
@@ -186,11 +243,6 @@ const {
 	html.dark .project-tab.active {
 		background: rgba(30, 41, 59, 0.8);
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-	}
-
-	.project-panels {
-		width: 100%;
-		position: relative;
 	}
 
 	.project-panel {
@@ -250,6 +302,7 @@ const {
 
 		tabs.forEach((tab) => {
 			tab.addEventListener('click', () => {
+        console.log('tab clicked');
 				const targetId = tab.getAttribute('data-tab');
 
 				// Update tabs

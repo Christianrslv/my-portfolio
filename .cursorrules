@@ -1,0 +1,441 @@
+```markdown
+# Portfolio Project - Cursor AI Rules
+
+You are helping maintain an Astro portfolio with complex scroll-based animations. This is a sophisticated codebase with intricate GSAP/ScrollTrigger implementations. Read these rules carefully before making changes.
+
+## ⚠️ CRITICAL: Understand the Complexity
+
+This project has several **highly complex, fragile systems**:
+
+1. **Desktop GSAP ScrollTrigger** - 500+ lines of intricate scroll math with section tolerance zones, timeline expansion, and background animations
+2. **Mobile Card Stacking** - CSS-only sticky positioning with precise z-index layering
+3. **Background Image Orchestration** - Multi-phase zoom/slide/fade animations with dual overlay system
+4. **Timeline Scroll Sync** - Extended scroll units with horizontal progress mapping
+
+**⚠️ What this means for you:**
+- Small changes can break the entire scroll experience
+- Desktop and mobile use fundamentally different approaches
+- You cannot simply "add a feature" without understanding the scroll calculations
+- Test BOTH desktop (>1024px) and mobile (≤1024px) after ANY change
+
+## 📚 Required Reading
+
+Before making ANY changes, you MUST read:
+- `PROJECT_CONTEXT.md` - Complete architecture overview
+- `CLAUDE.md` - Project-specific guidance
+- `src/pages/index.astro` lines 140-677 - The main scroll logic
+
+## 🎯 General Principles
+
+### 1. Desktop vs Mobile Separation
+**ALWAYS maintain separate implementations:**
+
+```javascript
+const isMobile = () => window.innerWidth <= 1024;
+
+function initFeature() {
+  if (isMobile()) {
+    console.log('[Feature] Mobile detected - using CSS approach');
+    // CSS-only implementation
+    return;
+  }
+  
+  console.log('[Feature] Desktop detected - using GSAP');
+  // GSAP implementation
+}
+```
+
+**Why:** Desktop uses GSAP with pinned sections, mobile uses CSS sticky positioning. Mixing these approaches will break the experience.
+
+### 2. Component Reuse
+**BEFORE creating a new component:**
+1. Check existing components in `src/components/`
+2. See if SectionTitle, ProjectCard, or other shared components fit
+3. If similar styling exists, extract it to a shared component
+
+**Example - WRONG:**
+```astro
+<!-- Creating new card from scratch -->
+<div class="my-new-card bg-white/25 backdrop-blur-16">
+  <!-- content -->
+</div>
+```
+
+**Example - RIGHT:**
+```astro
+<!-- Reusing glassmorphism pattern from Skills component -->
+<div class="skill-category">
+  <!-- Already has backdrop-blur, border, hover effects -->
+</div>
+```
+
+### 3. Animation Initialization Pattern
+**ALWAYS use this pattern for client-side animations:**
+
+```javascript
+// 1. Define initialization function
+function initMyAnimation() {
+  // Check if mobile (skip GSAP on mobile)
+  if (isMobile()) {
+    console.log('[MyFeature] Mobile - using CSS');
+    return;
+  }
+  
+  // Desktop GSAP logic
+  console.log('[MyFeature] Desktop - initializing GSAP');
+  // ...
+}
+
+// 2. Initialize on DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMyAnimation);
+} else {
+  initMyAnimation();
+}
+
+// 3. Handle resize for mode switching
+let currentMode = isMobile() ? 'mobile' : 'desktop';
+window.addEventListener('resize', () => {
+  const newMode = isMobile() ? 'mobile' : 'desktop';
+  if (newMode !== currentMode) {
+    ScrollTrigger.getAll().forEach(st => st.kill());
+    initMyAnimation();
+    currentMode = newMode;
+  }
+});
+```
+
+## 🎨 Styling: Tailwind vs Plain CSS
+
+### Use Tailwind For:
+✅ Layout utilities (flex, grid, spacing)
+✅ Typography (text sizes, weights, colors)
+✅ Responsive breakpoints (sm:, md:, lg:)
+✅ Theme classes (dark:)
+✅ Simple component styles
+
+### Use Plain CSS For:
+❌ GSAP animation targets (MUST exist in CSS for proper resets)
+❌ Complex multi-stop gradients
+❌ CSS variables that change at runtime
+❌ Pseudo-elements (::before, ::after)
+❌ @keyframes animations
+❌ Webkit-specific properties
+
+### Document Your Decision
+**When using plain CSS instead of Tailwind, ALWAYS add a comment:**
+
+```css
+/* Plain CSS required: GSAP modifies transform at runtime */
+.background-image-layer {
+  position: absolute;
+  transform: translateX(0) scale(1);
+  transition: transform 0.15s linear;
+}
+```
+
+```css
+/* Plain CSS required: 5-stop gradient with CSS variables for theme support */
+.overlay-gradient {
+  background: linear-gradient(
+    var(--grad-direction),
+    rgba(var(--overlay-gradient-color), var(--grad-opacity-start)) var(--grad-stop-1),
+    /* ... more stops ... */
+  );
+}
+```
+
+## 🚀 GSAP/ScrollTrigger Patterns
+
+### Core Constants (DO NOT MODIFY without testing extensively)
+```javascript
+const SECTION_SCROLL_UNITS = 0.80;        // Scroll distance per section
+const TIMELINE_SCROLL_UNITS = 0.75;       // Scroll per timeline entry
+const SECTION_TOLERANCE = 0.25;           // Dead zone for transitions
+const BACKGROUND_IMAGE_END_SECTION = 2;   // Where bg hides
+```
+
+**⚠️ Changing these will affect:**
+- Section transition timing
+- Timeline scroll length
+- Background animation coordination
+- Nav link scroll calculations
+
+### Adding a New Section
+**This is VERY COMPLEX. Consider if you really need to do this.**
+
+If you must add a section:
+
+1. Add the section to DOM in `index.astro`
+2. Update `<ScrollIndicator totalSections={NEW_NUMBER} />`
+3. Update all section index references
+4. Recalculate scroll math for timeline
+5. Add mobile z-index stacking for new section
+6. Test BOTH desktop scroll AND mobile stacking
+7. Update nav links in `config.ts` and `Navbar.astro`
+
+**⚠️ Warning:** This is a 2-3 hour task minimum. You will break the scroll experience multiple times while getting it right.
+
+### Modifying ScrollTrigger
+**DO NOT touch the main ScrollTrigger unless you understand:**
+- How `exactProgress` maps to `mappedProgress`
+- Timeline progress calculation with extra units
+- Section tolerance zones and discrete switching
+- Background zoom/slide/fade synchronization
+
+**If you need to modify scroll behavior:**
+1. Copy current scroll calculations to a comment
+2. Make minimal changes
+3. Test at multiple scroll positions (0%, 25%, 50%, 75%, 100%)
+4. Test section boundaries thoroughly
+5. Test timeline section entry/exit
+
+## 📱 Mobile-Specific Rules
+
+### Card Stacking CSS
+The mobile experience uses `position: sticky` with precise z-index layering:
+
+```css
+/* Sections 0-1: Transparent, background shows through */
+.scroll-panel#home,
+.scroll-panel#about {
+  background: transparent;
+  position: sticky;
+  top: 0;
+  z-index: 10-11;
+}
+
+/* Sections 2+: Card stacking */
+.scroll-panel:nth-child(n+3) {
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary);
+  border-top-left-radius: 20px;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Z-index determines stack order */
+.scroll-panel:nth-child(3) { z-index: 30; }
+.scroll-panel:nth-child(4) { z-index: 40; }
+```
+
+**⚠️ DO NOT:**
+- Change z-index values without adjusting ALL sections
+- Add `position: relative/absolute` to sections
+- Remove `sticky` positioning
+- Change the `nth-child(n+3)` selector without understanding why sections 0-1 are different
+
+### Mobile Background Fade
+Mobile has its own background fade logic in `initMobileBackgroundFade()`:
+- Phase 1: Overlay transition during Hero scroll
+- Phase 2: Background fadeout when entering Skills
+
+**If you need to modify:** Update the scroll thresholds carefully. They're calculated based on section heights and must synchronize with the card stacking reveal.
+
+## 🎭 Component Patterns
+
+### Hero Name Animation
+The letter-by-letter animation in Hero.astro:
+- Uses Web Animations API (not GSAP)
+- Triggered by `siteready` event from preloader
+- Has 3s failsafe timeout
+
+**⚠️ DO NOT:**
+- Add competing animations to the name element
+- Remove the `siteready` event listener
+- Change letter delay calculations without testing
+
+### Timeline Glow Effect
+The timeline component has a complex glow system:
+- Bar glow follows scroll progress horizontally
+- Vertical glow beam extends upward
+- Year labels glow within 5% radius
+
+**⚠️ Complexity:** The glow position is calculated from scroll progress, point positions are measured in percentages, and glowing state has distance-based intensity falloff.
+
+### Theme Switching
+There are TWO ThemeToggle components (desktop + mobile):
+- Both must update synchronously
+- Uses `data-theme-initialized` to prevent duplicates
+- Theme stored in localStorage
+
+**When adding theme support to a new component:**
+```css
+/* Default light theme */
+.component {
+  background: var(--bg-primary);
+}
+
+/* Dark theme override */
+html.dark .component {
+  /* Only override what changes */
+}
+```
+
+## 🚨 Common Pitfalls
+
+### 1. "I want to add a new section"
+**⚠️ STOP.** This is complex. See "Adding a New Section" above. Budget 2-3 hours minimum.
+
+### 2. "I want to change scroll speed"
+**⚠️ CAREFUL.** Modify `SECTION_SCROLL_UNITS` carefully. This affects:
+- All section transitions
+- Timeline math
+- Background animation timing
+- Nav scroll calculations
+
+Test extensively at all section boundaries.
+
+### 3. "I want to add GSAP animation to a component"
+**⚠️ CAREFUL.** You must:
+- Skip GSAP on mobile (use CSS instead)
+- Clean up instances on resize
+- Not conflict with main ScrollTrigger
+- Use separate triggers or timelines
+
+### 4. "The background image animation is broken"
+**⚠️ COMPLEX.** The background has:
+- Zoom animation (0-70% of section 0)
+- Overlay swap (synchronized with zoom)
+- Exit slide (section 1, 0-60%)
+- Two separate overlay layers
+
+Debug by checking:
+- Current section index
+- Section progress (0-1 within section)
+- Transform values on `.background-image-layer`
+- Opacity values on both overlays
+
+### 5. "Timeline scroll is wrong"
+**⚠️ COMPLEX.** Timeline calculations involve:
+- Extra scroll units based on entry count
+- Progress remapping during timeline section
+- Transition logic at timeline boundaries
+
+Check `data-timeline-entries`, `data-timeline-units`, and console logs.
+
+## 🎯 Testing Checklist
+
+Before committing changes that affect layout/animations:
+
+### Desktop (>1024px)
+- [ ] Section 0 (Hero) displays correctly
+- [ ] Scroll to Section 1 (About) - smooth transition
+- [ ] Background zooms during Section 0
+- [ ] Overlays transition correctly
+- [ ] Background exits during Section 1
+- [ ] Sections 2-5 appear without background
+- [ ] Timeline progress bar animates
+- [ ] Timeline year labels glow as you scroll
+- [ ] Timeline content switches correctly
+- [ ] All 6 sections accessible
+- [ ] Nav links work correctly
+- [ ] ScrollIndicator dots update
+
+### Mobile (≤1024px)
+- [ ] Hero section visible with background
+- [ ] About section sticky, background visible
+- [ ] Skills section appears as "card" over About
+- [ ] Each section stacks properly
+- [ ] Background fades when Skills appears
+- [ ] Timeline horizontal scroll works
+- [ ] Mobile menu opens/closes
+- [ ] Mobile menu has correct contrast
+- [ ] No GSAP console errors
+
+### Both
+- [ ] Theme toggle works
+- [ ] Dark mode looks correct
+- [ ] No console errors
+- [ ] Content from markdown displays
+- [ ] Images load
+- [ ] Fonts load correctly
+
+## 🎓 Learning Resources
+
+### Understanding the Codebase
+1. Read `PROJECT_CONTEXT.md` completely
+2. Open DevTools, scroll through the site, watch section changes in console
+3. Read the main scroll script in `index.astro` with comments
+4. Experiment with constants in a test branch
+
+### GSAP/ScrollTrigger
+- Official docs: https://gsap.com/docs/v3/Plugins/ScrollTrigger/
+- This project uses: pin, scrub, onUpdate
+- Key concept: "progress" (0-1) maps to scroll position
+
+### When Stuck
+1. Check console logs (there are many debug logs)
+2. Check if issue is desktop-only or mobile-only
+3. Verify you're testing at correct viewport width
+4. Read existing similar implementation
+5. Ask for help with specific error messages
+
+## 🚫 Absolute Don'ts
+
+1. ❌ Don't remove console.log statements (they're debugging aids)
+2. ❌ Don't mix GSAP and CSS animations on the same element
+3. ❌ Don't use `!important` unless absolutely necessary (document why)
+4. ❌ Don't modify scroll constants without understanding implications
+5. ❌ Don't remove `isMobile()` checks
+6. ❌ Don't add animations without checking mobile behavior
+7. ❌ Don't commit without testing both viewport sizes
+8. ❌ Don't remove `data-*` attributes (they're used in JS)
+9. ❌ Don't change section IDs (they're referenced in multiple places)
+10. ❌ Don't modify the main ScrollTrigger without extensive testing
+
+## ✅ Good Practices
+
+1. ✅ Add console.log statements when debugging
+2. ✅ Test viewport at exactly 1024px (the breakpoint)
+3. ✅ Read similar code before implementing new features
+4. ✅ Keep desktop and mobile logic separate
+5. ✅ Use existing components when possible
+6. ✅ Document why you chose CSS over Tailwind
+7. ✅ Add comments explaining complex calculations
+8. ✅ Test dark mode after style changes
+9. ✅ Verify content collections still load after schema changes
+10. ✅ Keep animations subtle and performant
+
+## 📝 Code Comment Standards
+
+### When to add comments:
+
+```javascript
+// GSAP scroll calculations - do not modify without testing all sections
+const exactProgress = self.progress * totalSegments;
+```
+
+```css
+/* Plain CSS required: Multi-stop gradient with responsive CSS variables.
+   Tailwind cannot handle 5+ stops with per-breakpoint variable values. */
+.overlay-gradient {
+  background: linear-gradient(/* ... */);
+}
+```
+
+```javascript
+// Timeline section gets extra scroll distance: (entries - 1) × TIMELINE_SCROLL_UNITS
+const timelineUnits = timelineSegments > 0
+  ? timelineSegments * TIMELINE_SCROLL_UNITS
+  : SECTION_SCROLL_UNITS;
+```
+
+## 🎯 Final Reminders
+
+This is a **sophisticated, fragile codebase** with intricate scroll orchestration. Simple-looking changes can have cascading effects. 
+
+**Before making changes:**
+- ✅ Read the relevant sections of PROJECT_CONTEXT.md
+- ✅ Understand both desktop AND mobile behavior
+- ✅ Consider if you can reuse existing components
+- ✅ Budget more time than you think you need
+
+**When you break something (you will):**
+- 📝 Check console logs
+- 📝 Verify viewport size (desktop vs mobile)
+- 📝 Test at section boundaries
+- 📝 Compare against working version in git
+
+**Remember:** Complex scroll experiences are inherently difficult. What looks like a "simple animation" often requires careful coordination with the existing scroll math. When in doubt, ask for guidance before proceeding.
+```

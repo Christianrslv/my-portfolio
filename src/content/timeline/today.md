@@ -2,7 +2,6 @@
 title: "Present Day"
 date: "Today"
 category: "current"
-icon: "✨"
 ---
 
 Today represents where I am now - continuously learning, building, and evolving. Every day brings new challenges and opportunities to grow.

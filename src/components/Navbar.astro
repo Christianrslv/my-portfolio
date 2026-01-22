@@ -33,12 +33,12 @@ const { logo = 'Portfolio', links = [
 <!-- Mobile menu with Alpine.js - responsive horizontal expansion -->
 <div 
 	x-data="{ open: false }" 
-	class="lg:hidden fixed bottom-6 right-4 left-4 z-[2000] flex justify-end"
+	class="lg:hidden fixed bottom-6 right-4 left-4 z-[2000] flex justify-end pointer-events-none"
 	id="mobile-menu-container"
 >
 	<!-- Container that expands horizontally - fully transparent -->
 	<div 
-		class="mobile-menu-bar flex items-center justify-end min-h-16 rounded-full transition-all duration-300 ease-out overflow-hidden"
+		class="mobile-menu-bar pointer-events-auto flex items-center justify-end min-h-16 rounded-full transition-all duration-300 ease-out overflow-hidden"
 		:class="open ? 'w-full sm:w-auto rounded-3xl sm:rounded-full px-4 sm:pl-5 sm:pr-1 py-3 sm:py-0' : 'w-16'"
 	>
 		<!-- Menu items - shown when open -->

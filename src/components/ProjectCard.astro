@@ -11,133 +11,32 @@ interface Props {
 const { title, description, technologies, projectUrl = "#", codeUrl = "#", class: className } = Astro.props;
 ---
 
-<article class={`project-card ${className}`}>
-	<div class="project-image">
-		<div class="project-gradient"></div>
-		<div class="project-overlay">
-			<a href={projectUrl} class="project-link" aria-label="View project">
-				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<article class={`bg-(--bg-tertiary) rounded-xl overflow-hidden border border-(--border-color) transition-all duration-300 ease-in-out hover:-translate-y-[5px] hover:border-(--accent-primary) hover:shadow-[0_10px_30px_rgba(99,102,241,0.2)] md:hover:-translate-y-[3px] ${className}`}>
+	<div class="relative w-full aspect-video overflow-hidden bg-(--bg-secondary)">
+		<div class="w-full h-full bg-(--accent-primary) opacity-[0.08] transition-opacity duration-200 ease-in-out hover:opacity-[0.12]"></div>
+		<div class="absolute inset-0 bg-black/70 flex items-center justify-center gap-4 md:gap-6 opacity-0 transition-opacity duration-300 ease-in-out hover:opacity-100">
+			<a href={projectUrl} class="w-10 h-10 md:w-12 md:h-12 bg-(--bg-tertiary) rounded-full flex items-center justify-center text-(--text-primary) no-underline transition-all duration-300 ease-in-out hover:bg-(--accent-primary) hover:scale-110" aria-label="View project">
+				<svg class="w-5 h-5 md:w-6 md:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
 					<polyline points="15 3 21 3 21 9"></polyline>
 					<line x1="10" y1="14" x2="21" y2="3"></line>
 				</svg>
 			</a>
-			<a href={codeUrl} class="project-link" aria-label="View code">
-				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<a href={codeUrl} class="w-10 h-10 md:w-12 md:h-12 bg-(--bg-tertiary) rounded-full flex items-center justify-center text-(--text-primary) no-underline transition-all duration-300 ease-in-out hover:bg-(--accent-primary) hover:scale-110" aria-label="View code">
+				<svg class="w-5 h-5 md:w-6 md:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<polyline points="16 18 22 12 16 6"></polyline>
 					<polyline points="8 6 2 12 8 18"></polyline>
 				</svg>
 			</a>
 		</div>
 	</div>
-	<div class="project-content">
-		<h3 class="project-title">{title}</h3>
-		<p class="project-description">{description}</p>
-		<div class="project-tech">
+	<div class="p-4 md:p-6">
+		<h3 class="text-lg md:text-xl mb-2 md:mb-3 text-(--text-primary)">{title}</h3>
+		<p class="text-(--text-secondary) mb-3 md:mb-4 leading-relaxed text-sm md:text-base">{description}</p>
+		<div class="flex flex-wrap gap-1.5 md:gap-2">
 			{technologies.map((tech) => (
-				<span>{tech}</span>
+				<span class="text-xs text-(--accent-primary) font-mono">{tech}</span>
 			))}
 		</div>
 	</div>
 </article>
-
-<style>
-	.project-card {
-		background: var(--bg-tertiary);
-		border-radius: 12px;
-		overflow: hidden;
-		border: 1px solid var(--border-color);
-		transition: all 0.3s ease;
-	}
-
-	.project-card:hover {
-		transform: translateY(-5px);
-		border-color: var(--accent-primary);
-		box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
-	}
-
-	.project-image {
-		position: relative;
-		width: 100%;
-		aspect-ratio: 16/9;
-		overflow: hidden;
-		background: var(--bg-secondary);
-	}
-
-	.project-gradient {
-		width: 100%;
-		height: 100%;
-		background: var(--accent-primary);
-		opacity: 0.08;
-		transition: opacity 0.2s ease;
-	}
-
-	.project-card:hover .project-gradient {
-		opacity: 0.12;
-	}
-
-	.project-overlay {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(0, 0, 0, 0.7);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 1rem;
-		opacity: 0;
-		transition: opacity 0.3s ease;
-	}
-
-	.project-card:hover .project-overlay {
-		opacity: 1;
-	}
-
-	.project-link {
-		width: 48px;
-		height: 48px;
-		background: var(--bg-tertiary);
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--text-primary);
-		text-decoration: none;
-		transition: all 0.3s ease;
-	}
-
-	.project-link:hover {
-		background: var(--accent-primary);
-		transform: scale(1.1);
-	}
-
-	.project-content {
-		padding: 1.5rem;
-	}
-
-	.project-title {
-		font-size: 1.5rem;
-		margin-bottom: 0.75rem;
-		color: var(--text-primary);
-	}
-
-	.project-description {
-		color: var(--text-secondary);
-		margin-bottom: 1rem;
-		line-height: 1.6;
-	}
-
-	.project-tech {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
-
-	.project-tech span {
-		font-size: 0.75rem;
-		color: var(--accent-primary);
-		font-family: 'Courier New', monospace;
-	}
-</style>

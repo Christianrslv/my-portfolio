@@ -84,6 +84,7 @@ export async function getPortfolioContent() {
 				technologies: entry.data.technologies,
 				projectUrl: entry.data.projectUrl || '#',
 				codeUrl: entry.data.codeUrl || '#',
+				category: entry.data.category,
 			})),
 			skills: {
 				categories: skills.map(entry => ({
