@@ -68,41 +68,6 @@ const { class: className } = Astro.props;
 				})}
 			</div>
 		</div>
-
-		<!-- MOBILE: Vertical Sections with Progress Tracking -->
-		<div class="timeline-container mobile-timeline">
-			{timelineEntries.map((entry, index) => {
-				const EntryContent = entry.Content;
-				return (
-					<div class="timeline-section" data-index={index} data-year={entry.date}>
-						<!-- Fixed header with year + progress bar -->
-						<div class="timeline-section-header">
-							<div class="header-content">
-								<span class="section-year">{formatTimelineDate(entry.date)}</span>
-								<div class="section-progress-bar">
-									<div class="section-progress-fill" data-section={index}></div>
-								</div>
-							</div>
-						</div>
-						
-						<!-- Scrollable content for this year -->
-						<div class="timeline-section-content">
-							<div class="content-card">
-								<div class="content-header">
-									<div class="content-meta">
-										<span class="content-category">{entry.category}</span>
-									</div>
-									<h2 class="content-title">{entry.title}</h2>
-								</div>
-								<div class="content-body">
-									{EntryContent && <EntryContent />}
-								</div>
-							</div>
-						</div>
-					</div>
-				);
-			})}
-		</div>
 	</div>
 </section>
 
@@ -793,66 +758,7 @@ const { class: className } = Astro.props;
 			}
 		});
 	}
-	
-	// ========================================
-	// MOBILE TIMELINE: Per-section ScrollTriggers
-	// ========================================
-	function initMobileTimeline() {
-		if (!isMobile()) {
-			console.log('[Timeline] Desktop mode - skipping mobile timeline');
-			return;
-		}
-		
-		console.log('[Timeline] Mobile mode - initializing vertical sections');
-		
-		const sections = document.querySelectorAll('.timeline-section');
-		const triggers = []; // Store triggers for cleanup
-		
-		sections.forEach((section, index) => {
-			const progressFill = section.querySelector('.section-progress-fill');
-			const year = section.dataset.year;
-			
-			if (!progressFill) {
-				console.warn(`[Timeline] No progress fill found for section ${index}`);
-				return;
-			}
-			
-			console.log(`[Timeline] Creating ScrollTrigger for section ${index} (${year})`);
-			
-			// Create ScrollTrigger for this section
-			const trigger = ScrollTrigger.create({
-				trigger: section,
-				start: 'top 70px', // When section header reaches sticky position
-				end: 'bottom 70px', // When section bottom passes sticky position
-				scrub: 0.3, // Smooth animation with slight delay
-				onUpdate: (self) => {
-					// Animate progress line 0% → 100% as user scrolls through section
-					const progress = self.progress * 100;
-					progressFill.style.width = `${progress}%`;
-					
-					// Debug log (can be removed in production)
-					if (Math.abs(progress - 0) < 1 || Math.abs(progress - 100) < 1 || progress % 25 < 1) {
-						console.log(`[Timeline] Section ${index} (${year}): ${progress.toFixed(1)}%`);
-					}
-				},
-				onEnter: () => {
-					console.log(`[Timeline] Entered section ${index} (${year})`);
-				},
-				onLeave: () => {
-					console.log(`[Timeline] Left section ${index} (${year})`);
-				},
-				markers: false // Set to true for debugging
-			});
-			
-			triggers.push(trigger);
-		});
-		
-		console.log(`[Timeline] Created ${triggers.length} mobile ScrollTriggers`);
-		
-		// Store triggers for cleanup
-		return triggers;
-	}
-	
+
 	// ========================================
 	// INITIALIZATION & MODE SWITCHING
 	// ========================================
@@ -867,12 +773,7 @@ const { class: className } = Astro.props;
 		}
 		
 		// Initialize based on viewport
-		if (isMobile()) {
-			const triggers = initMobileTimeline();
-			if (triggers) {
-				mobileScrollTriggers = triggers;
-			}
-		} else {
+		if (!isMobile()) {
 			initDesktopTimeline();
 		}
 	}

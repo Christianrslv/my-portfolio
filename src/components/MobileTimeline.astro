@@ -12,79 +12,25 @@ const { class: className } = Astro.props;
 	class=`${className} timeline-horizontal scroll-panel flex min-h-screen w-full items-start justify-start`
 	data-timeline-entries={timelineEntries.length}
 >
-	<div class="container">
-		<SectionTitle number="05" title="Journey Timeline" />
-
-		<!-- DESKTOP: Horizontal Timeline -->
-		<div class="timeline-container desktop-timeline">
-			<!-- Timeline Track -->
-			<div class="timeline-track">
-				<!-- Clean horizontal bar -->
-				<div class="timeline-bar"></div>
-
-				<!-- Scroll-based glow on the bar -->
-				<div class="bar-glow" id="bar-glow"></div>
-
-				<!-- Vertical glow beam reaching up to text -->
-				<div class="vertical-glow" id="vertical-glow"></div>
-
-				<!-- Year labels above the bar -->
-				<div class="timeline-points">
-					{timelineEntries.map((entry, index) => (
-						<div
-							class="timeline-point"
-							data-index={index}
-							data-year={entry.date}
-						>
-							<span class="point-year">{formatTimelineDate(entry.date)}</span>
-						</div>
-					))}
-				</div>
-			</div>
-
-			<!-- Content Display Area -->
-			<div class="timeline-content-wrapper">
-				{timelineEntries.map((entry, index) => {
-					const EntryContent = entry.Content;
-					return (
-						<div
-							class="timeline-content-panel"
-							data-index={index}
-						>
-							<div class="content-card">
-								<div class="content-header">
-									<div class="content-meta">
-										<span class="content-category">{entry.category}</span>
-										<span class="content-date">{formatTimelineDate(entry.date)}</span>
-									</div>
-									<h2 class="content-title">{entry.title}</h2>
-								</div>
-								<div class="content-body">
-									{EntryContent && <EntryContent />}
-								</div>
-							</div>
-						</div>
-					);
-				})}
-			</div>
-		</div>
-
+	<div class="container relative pt-0!">
+    <!-- Fixed header with year + progress bar -->
+    <div class="journey-timeline-header sticky top-0 pt-6 z-10 flex flex-col gap-1 pb-4">
+      <SectionTitle number="05" title="Journey Timeline" />
+        <div class="timeline-section-header">
+          <div class="header-content">
+            <span class="section-year">{formatTimelineDate('2019')}</span>
+            <div class="section-progress-bar">
+              <div class="section-progress-fill" data-section={0}></div>
+            </div>
+          </div>
+        </div>
+    </div>
 		<!-- MOBILE: Vertical Sections with Progress Tracking -->
 		<div class="timeline-container mobile-timeline">
 			{timelineEntries.map((entry, index) => {
 				const EntryContent = entry.Content;
 				return (
 					<div class="timeline-section" data-index={index} data-year={entry.date}>
-						<!-- Fixed header with year + progress bar -->
-						<div class="timeline-section-header">
-							<div class="header-content">
-								<span class="section-year">{formatTimelineDate(entry.date)}</span>
-								<div class="section-progress-bar">
-									<div class="section-progress-fill" data-section={index}></div>
-								</div>
-							</div>
-						</div>
-						
 						<!-- Scrollable content for this year -->
 						<div class="timeline-section-content">
 							<div class="content-card">
@@ -107,6 +53,20 @@ const { class: className } = Astro.props;
 </section>
 
 <style>
+  .journey-timeline-header::before {
+		content: '';
+		position: absolute;
+		top: 0;
+    left: 0;
+    right: 0;
+    height: 120%;
+		background: transparent;
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+		-webkit-mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+		z-index: -1;
+	}
   .timeline-bg {
 		background: rgba(255, 255, 255, 0.25);
 		backdrop-filter: blur(16px);
@@ -564,27 +524,13 @@ const { class: className } = Astro.props;
 		
 		/* Each year = one full-screen section */
 		.timeline-section {
-			min-height: 100vh;
+			/* min-height: 100vh; */
 			position: relative;
-			padding-top: 120px; /* Space for fixed header */
-			padding-bottom: 4rem;
-		}
-		
-		/* Fixed header per section */
-		.timeline-section-header {
-			position: sticky;
-			top: 70px; /* Below main navbar (hidden on mobile) */
-			z-index: 100;
-			background: rgba(255, 255, 255, 0.95);
-			backdrop-filter: blur(12px);
-			-webkit-backdrop-filter: blur(12px);
-			padding: 1.5rem 0;
-			margin: 0 -1rem; /* Extend to edges */
-			border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+			/* padding-top: 120px; Space for fixed header */
+			/* padding-bottom: 4rem; */
 		}
 		
 		html.dark .timeline-section-header {
-			background: rgba(15, 23, 42, 0.95);
 			border-bottom-color: rgba(148, 163, 184, 0.1);
 		}
 		
@@ -601,7 +547,6 @@ const { class: className } = Astro.props;
 			color: var(--text-primary);
 			font-family: 'JetBrains Mono', monospace;
 			letter-spacing: 0.05em;
-			margin-bottom: 1rem;
 		}
 		
 		/* Minimalist progress line */
@@ -635,25 +580,6 @@ const { class: className } = Astro.props;
 			padding-bottom: 2rem;
 		}
 		
-		/* Reuse existing content-card styles */
-		.timeline-section .content-card {
-			margin-top: 2rem;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.timeline-section {
-			padding-top: 100px;
-		}
-		
-		.timeline-section-header {
-			top: 60px;
-			padding: 1rem 0;
-		}
-		
-		.section-year {
-			font-size: 1rem;
-		}
 	}
 </style>
 
@@ -665,134 +591,6 @@ const { class: className } = Astro.props;
 	gsap.registerPlugin(ScrollTrigger);
 	
 	const isMobile = () => window.innerWidth <= 1024;
-	
-	// ========================================
-	// DESKTOP TIMELINE: Global progress listener
-	// ========================================
-	function initDesktopTimeline() {
-		if (isMobile()) {
-			console.log('[Timeline] Mobile mode - skipping desktop timeline');
-			return;
-		}
-		
-		console.log('[Timeline] Desktop mode - initializing horizontal timeline');
-		
-		const timelinePoints = document.querySelectorAll('.timeline-point');
-		const contentPanels = document.querySelectorAll('.timeline-content-panel');
-		const barGlow = document.getElementById('bar-glow');
-		const verticalGlow = document.getElementById('vertical-glow');
-		const timelineTrack = document.querySelector('.timeline-track');
-
-		const totalEntries = timelinePoints.length;
-		let currentActiveIndex = 0;
-
-		// Get the actual positions of timeline points
-		function getPointPositions() {
-			const trackRect = timelineTrack?.getBoundingClientRect();
-			if (!trackRect) return [];
-
-			return Array.from(timelinePoints).map((point) => {
-				const rect = point.getBoundingClientRect();
-				// Calculate position as percentage along the timeline
-				const centerX = rect.left + rect.width / 2;
-				const relativeX = centerX - trackRect.left;
-				const percentage = (relativeX / trackRect.width) * 100;
-				return {
-					element: point,
-					position: Math.max(0, Math.min(100, percentage))
-				};
-			});
-		}
-
-		let pointPositions = getPointPositions();
-
-		// Update positions on resize
-		window.addEventListener('resize', () => {
-			pointPositions = getPointPositions();
-		});
-
-		// Handle timeline updates based on scroll progress
-		function updateTimeline(progress) {
-			const clamped = Math.max(0, Math.min(1, progress));
-
-			// Position the glow based on scroll progress
-			const glowPosition = clamped * 100; // Convert to percentage
-
-			if (barGlow && verticalGlow) {
-				barGlow.style.left = `${glowPosition}%`;
-				verticalGlow.style.left = `${glowPosition}%`;
-
-				// Show glows when scrolling through timeline
-				if (progress > 0 && progress < 1) {
-					barGlow.classList.add('active');
-					verticalGlow.classList.add('active');
-				} else {
-					barGlow.classList.remove('active');
-					verticalGlow.classList.remove('active');
-				}
-			}
-
-			// Calculate which point is closest to the glow
-			const glowRadius = 5; // 5% radius for glow effect
-
-			pointPositions.forEach(({ element, position }) => {
-				const distance = Math.abs(glowPosition - position);
-
-				if (distance < glowRadius) {
-					// Fade in as approaching, peak at center, fade out as leaving
-					const intensity = 1 - (distance / glowRadius);
-					if (intensity > 0.3) {
-						element.classList.add('glowing');
-					} else {
-						element.classList.remove('glowing');
-					}
-				} else {
-					element.classList.remove('glowing');
-				}
-			});
-
-			// Handle content panel switching
-			const segmentSize = 1 / totalEntries;
-			let activeIndex = 0;
-
-			for (let i = 0; i < totalEntries; i++) {
-				const segmentStart = i * segmentSize;
-				const segmentEnd = (i + 1) * segmentSize;
-				const threshold = segmentSize * 0.05;
-
-				if (clamped >= segmentStart - threshold && clamped < segmentEnd) {
-					activeIndex = i;
-					break;
-				}
-			}
-
-			activeIndex = Math.min(activeIndex, totalEntries - 1);
-
-			timelinePoints.forEach((point, index) => {
-				point.classList.remove('active');
-				if (index === activeIndex) {
-					point.classList.add('active');
-				}
-			});
-
-			if (activeIndex !== currentActiveIndex) {
-				contentPanels.forEach((panel, index) => {
-					panel.classList.toggle('active', index === activeIndex);
-				});
-				currentActiveIndex = activeIndex;
-			}
-		}
-
-		updateTimeline(0);
-
-		// Listen to global timeline progress event
-		window.addEventListener('timelineprogress', (e) => {
-			const detail = e.detail || {};
-			if (typeof detail.progress === 'number') {
-				updateTimeline(detail.progress);
-			}
-		});
-	}
 	
 	// ========================================
 	// MOBILE TIMELINE: Per-section ScrollTriggers
@@ -807,23 +605,22 @@ const { class: className } = Astro.props;
 		
 		const sections = document.querySelectorAll('.timeline-section');
 		const triggers = []; // Store triggers for cleanup
-		
+    const progressFill = document.querySelector('.section-progress-fill');
+		const sectionYear = document.querySelector('.section-year');
+
 		sections.forEach((section, index) => {
-			const progressFill = section.querySelector('.section-progress-fill');
-			const year = section.dataset.year;
-			
+			let year = section.dataset.year;
+			console.log(`[Timeline] Year: ${year}`);
 			if (!progressFill) {
 				console.warn(`[Timeline] No progress fill found for section ${index}`);
 				return;
 			}
-			
-			console.log(`[Timeline] Creating ScrollTrigger for section ${index} (${year})`);
-			
+			// console.log(`[Timeline] Creating ScrollTrigger for section ${index} (${year})`);	
 			// Create ScrollTrigger for this section
 			const trigger = ScrollTrigger.create({
 				trigger: section,
-				start: 'top 70px', // When section header reaches sticky position
-				end: 'bottom 70px', // When section bottom passes sticky position
+				start: 'top', // When section header reaches sticky position
+				end: 'bottom', // When section bottom passes sticky position
 				scrub: 0.3, // Smooth animation with slight delay
 				onUpdate: (self) => {
 					// Animate progress line 0% → 100% as user scrolls through section
@@ -831,15 +628,22 @@ const { class: className } = Astro.props;
 					progressFill.style.width = `${progress}%`;
 					
 					// Debug log (can be removed in production)
-					if (Math.abs(progress - 0) < 1 || Math.abs(progress - 100) < 1 || progress % 25 < 1) {
-						console.log(`[Timeline] Section ${index} (${year}): ${progress.toFixed(1)}%`);
-					}
+					// if (Math.abs(progress - 0) < 1 || Math.abs(progress - 100) < 1 || progress % 25 < 1) {
+					// 	console.log(`[Timeline] Section ${index} (${year}): ${progress.toFixed(1)}%`);
+					// }
+
+          // Update year display when entering a new section
+          if (sectionYear && sectionYear.textContent !== year) {
+            sectionYear.textContent = year;
+            // console.log(`[Timeline] Updated year display to: ${year}`);
+          }
+
 				},
 				onEnter: () => {
-					console.log(`[Timeline] Entered section ${index} (${year})`);
+					// console.log(`[Timeline] Entered section ${index} (${year})`);
 				},
 				onLeave: () => {
-					console.log(`[Timeline] Left section ${index} (${year})`);
+					// console.log(`[Timeline] Left section ${index} (${year})`);
 				},
 				markers: false // Set to true for debugging
 			});
