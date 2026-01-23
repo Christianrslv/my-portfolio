@@ -7,8 +7,8 @@ interface Props {
 const { text = "Designed & Built with ❤️", year = "2024" } = Astro.props;
 ---
 
-<footer class="footer">
-	<div class="container">
+<footer class="footer w-full">
+	<div class="p-6 lg:p-12 flex flex-col items-center justify-center">
 		<p>{text}</p>
 		<p class="footer-year">© {year}</p>
 	</div>
