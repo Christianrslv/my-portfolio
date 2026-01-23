@@ -6,7 +6,7 @@
 export const portfolioConfig = {
 	// Navigation
 	nav: {
-		logo: 'Portfolio',
+		logo: 'CR',
 		links: [
 			{ label: 'Home', href: '#home' },
 			{ label: 'About', href: '#about' },

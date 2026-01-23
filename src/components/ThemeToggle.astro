@@ -1,23 +1,67 @@
 <button
-	class="theme-toggle inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] px-3 py-2 text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-tertiary)]"
+	class="theme-toggle inline-flex items-center justify-center w-10 h-10 text-[var(--text-primary)] transition-all duration-200 hover:opacity-70"
 	type="button"
 	aria-label="Toggle theme"
 >
-	<span class="theme-icon">🌞</span>
-	<span class="theme-label">Light</span>
+	<!-- Sun icon for light mode -->
+	<svg class="theme-icon theme-icon-sun w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<circle cx="12" cy="12" r="5"></circle>
+		<line x1="12" y1="1" x2="12" y2="3"></line>
+		<line x1="12" y1="21" x2="12" y2="23"></line>
+		<line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+		<line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+		<line x1="1" y1="12" x2="3" y2="12"></line>
+		<line x1="21" y1="12" x2="23" y2="12"></line>
+		<line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+		<line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+	</svg>
+	<!-- Moon icon for dark mode -->
+	<svg class="theme-icon theme-icon-moon w-5 h-5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+	</svg>
+	<span class="theme-label sr-only">Light</span>
 </button>
+
+<style>
+	.theme-toggle {
+		cursor: pointer;
+	}
+	
+	/* Screen reader only text */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border-width: 0;
+	}
+</style>
 
 <script is:inline>
 	// Theme toggle - supports multiple buttons on the page
 	(function initThemeToggle() {
 		const buttons = document.querySelectorAll('.theme-toggle');
-		const icons = document.querySelectorAll('.theme-icon');
+		const sunIcons = document.querySelectorAll('.theme-icon-sun');
+		const moonIcons = document.querySelectorAll('.theme-icon-moon');
 		const labels = document.querySelectorAll('.theme-label');
 
 		const updateUI = (isDark) => {
-			icons.forEach(icon => {
-				if (icon) icon.textContent = isDark ? '🌙' : '🌞';
+			// Toggle icon visibility
+			sunIcons.forEach(icon => {
+				if (icon) {
+					icon.classList.toggle('hidden', isDark);
+				}
 			});
+			moonIcons.forEach(icon => {
+				if (icon) {
+					icon.classList.toggle('hidden', !isDark);
+				}
+			});
+			// Update labels for screen readers
 			labels.forEach(label => {
 				if (label) label.textContent = isDark ? 'Dark' : 'Light';
 			});
