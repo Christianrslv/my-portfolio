@@ -4,7 +4,7 @@ date: "Today"
 category: "current"
 ---
 
-Today represents where I am now - continuously learning, building, and evolving. Every day brings new challenges and opportunities to grow.
+Currently, I am working at IM Digital. Nowadays, my focus has shifted more toward the backend, building store integrations with Shopify through the GraphQL Shopify API. I still work with frontend development, but recently I’ve been focusing more on this backend work.
 
 ## Current Focus
 
@@ -15,3 +15,4 @@ Today represents where I am now - continuously learning, building, and evolving.
 ## What's Next
 
 The journey continues with an open mind and a passion for creating exceptional digital experiences. I'm excited to see what the future holds!
+Looking ahead, I am exploring new possibilities and feel curious and excited about what the future holds with these new technologies and tools, which already enable significant advances in productivity.

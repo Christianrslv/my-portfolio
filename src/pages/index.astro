@@ -116,11 +116,11 @@ console.log('[Index] About showImage:', config.about.showImage);
 				/>
 			</section>
 
-			<section id="skills" class="scroll-panel flex min-h-screen w-full items-center justify-center h-[calc(100dvh+300px)]">
+			<section id="skills" class="scroll-panel flex min-h-screen w-full items-center justify-center h-[calc(100dvh+300px)] lg:h-screen">
 				<Skills categories={config.skills.categories} />
 			</section>
 
-			<section id="projects" class="scroll-panel flex min-h-screen h-[calc(100dvh+300px)] w-full items-center justify-center">
+			<section id="projects" class="scroll-panel flex min-h-screen h-[calc(100dvh+300px)] lg:h-screen w-full items-center justify-center">
 				<Projects projects={config.projects} />
 			</section>
 
@@ -152,7 +152,7 @@ console.log('[Index] About showImage:', config.about.showImage);
 	const BREAKPOINT_MOBILE = 1024;
 	const SECTION_SCROLL_UNITS = 0.80;
 	const TIMELINE_SCROLL_UNITS = 0.75;
-	const SECTION_TOLERANCE = 0.25;
+	const SECTION_TOLERANCE = 1.5;
 	const BACKGROUND_IMAGE_END_SECTION = 2;
 	const ZOOM_START = 1.0;
 	const ZOOM_END = 1.5;
