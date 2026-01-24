@@ -79,7 +79,7 @@ console.log('[Index] About showImage:', config.about.showImage);
 
 	<div id="scroll-root" class="relative">
 		<!-- Test animated ball for scroll progress -->
-		<div id="scroll-progress-ball" class="scroll-progress-ball"></div>
+		<div id="scroll-progress-ball" class="scroll-progress-ball hidden lg:block"></div>
 		<div 
 			id="scroll-stage-bg"
 			class="scroll-stage relative h-screen w-full overflow-hidden"
@@ -116,19 +116,16 @@ console.log('[Index] About showImage:', config.about.showImage);
 				/>
 			</section>
 
-			<section id="skills" class="scroll-panel flex min-h-screen w-full items-center justify-center">
+			<section id="skills" class="scroll-panel flex min-h-screen w-full items-center justify-center h-[calc(100dvh+300px)]">
 				<Skills categories={config.skills.categories} />
 			</section>
 
-			<section id="projects" class="scroll-panel flex min-h-screen h-[calc(100vh+300px)] w-full items-center justify-center">
+			<section id="projects" class="scroll-panel flex min-h-screen h-[calc(100dvh+300px)] w-full items-center justify-center">
 				<Projects projects={config.projects} />
 			</section>
 
       <HorizontalTimeline class="hidden lg:flex"/>
-
-      <section id="mobile-timeline" class="lg:hidden scroll-panel flex min-h-screen w-full items-center justify-center z-80!">
-        <MobileTimeline class=""/>
-      </section>
+      <MobileTimeline class="lg:hidden"/>
       
 			<section id="contact" class="scroll-panel flex flex-col min-h-screen w-full items-center justify-center z-90!">
 				<Contact
@@ -149,80 +146,84 @@ console.log('[Index] About showImage:', config.about.showImage);
 
 	gsap.registerPlugin(ScrollTrigger);
 
-		// Check if we're on mobile (card stacking mode)
-	const isMobile = () => window.innerWidth <= 1024;
+	// ============================================
+	// CONSTANTS & CONFIGURATION
+	// ============================================
+	const BREAKPOINT_MOBILE = 1024;
+	const SECTION_SCROLL_UNITS = 0.80;
+	const TIMELINE_SCROLL_UNITS = 0.75;
+	const SECTION_TOLERANCE = 0.25;
+	const BACKGROUND_IMAGE_END_SECTION = 2;
+	const ZOOM_START = 1.0;
+	const ZOOM_END = 1.5;
+	const ZOOM_COMPLETION_POINT = 0.7;
+	const EXIT_COMPLETION_POINT = 0.6;
+	const EXIT_TRANSLATE_DISTANCE = -40;
+	const RESIZE_DEBOUNCE_MS = 150;
 
-  function initScrollExperience() {
-		const scrollRoot = document.querySelector('#scroll-root');
-		const scrollStage = document.querySelector('.scroll-stage');
-		const sections = Array.from(document.querySelectorAll('.scroll-panel'));
+	// ============================================
+	// UTILITY FUNCTIONS
+	// ============================================
+	const isMobile = () => window.innerWidth <= BREAKPOINT_MOBILE;
 
-		if (!scrollRoot || !scrollStage || !sections.length) {
-			return;
-		}
+	const getDatasetValue = (element, key, defaultValue) => {
+		return parseInt(element.dataset[key] || defaultValue, 10);
+	};
 
-		// On mobile, use CSS-based card stacking instead of GSAP
-		if (isMobile()) {
-			console.log('[GSAP] Mobile detected - using CSS card stacking');
-			
-			// Reset any GSAP-applied styles for mobile
-			sections.forEach((section) => {
-				gsap.set(section, {
-					clearProps: 'all'
-				});
-			});
-			
-			// Ensure scroll root height is auto for mobile
-			scrollRoot.style.height = 'auto';
-			
-			return; // Skip GSAP scroll experience on mobile
-		}
+	const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-		console.log('[GSAP] Desktop detected - initializing GSAP scroll experience');
-		console.log('[GSAP] initScrollExperience', { total: sections.length });
+	const setElementVisibility = (element, opacity) => {
+		if (!element) return;
+		element.style.opacity = String(Math.max(0, opacity));
+		element.style.visibility = opacity > 0.01 ? 'visible' : 'hidden';
+	};
 
+	// ============================================
+	// TIMELINE CALCULATIONS
+	// ============================================
+	function calculateTimelineData(sections) {
+		const timelineSection = sections.find(s => s.id === 'desktop-timeline');
+		const timelineEntries = timelineSection
+			? parseInt(timelineSection.dataset.timelineEntries || '1', 10)
+			: 1;
+		const timelineSegments = Math.max(0, timelineEntries - 1);
+		const timelineUnits = timelineSegments > 0
+			? timelineSegments * TIMELINE_SCROLL_UNITS
+			: SECTION_SCROLL_UNITS;
+		const timelineIndex = sections.findIndex(s => s.id === 'desktop-timeline');
+		const extraUnits = timelineIndex >= 0 ? Math.max(0, timelineUnits - SECTION_SCROLL_UNITS) : 0;
+
+		return { timelineSegments, timelineUnits, timelineIndex, extraUnits };
+	}
+
+	function calculateScrollHeight(sections, scrollRoot) {
 		const total = sections.length;
-		const SECTION_SCROLL_UNITS = 0.80; // Reduced for faster scrolling
-		const TIMELINE_SCROLL_UNITS = 0.75; // Reduced for faster timeline progression
-		const SECTION_TOLERANCE = 0.25; // Dead zone at start/end of each section (0-1 range)
-		
-		
-		// Section where background image should be hidden (2 = Skills and beyond)
-		const BACKGROUND_IMAGE_END_SECTION = 2;
-		const setHeight = () => {
-			const timelineSection = sections.find((section) => section.id === 'timeline');
-			const timelineEntries = timelineSection
-				? parseInt(timelineSection.dataset.timelineEntries || '1', 10)
-				: 1;
-			const timelineSegments = Math.max(0, timelineEntries - 1);
-			const timelineUnits = timelineSegments > 0
-				? timelineSegments * TIMELINE_SCROLL_UNITS
-				: SECTION_SCROLL_UNITS;
-			const timelineIndex = sections.findIndex((section) => section.id === 'timeline');
-			const extraUnits = timelineIndex >= 0 ? Math.max(0, timelineUnits - SECTION_SCROLL_UNITS) : 0;
-			const totalSegments = (total - 1) * SECTION_SCROLL_UNITS + extraUnits;
-			const scrollDistance = (totalSegments + 1) * window.innerHeight;
+		const { timelineSegments, timelineUnits, extraUnits } = calculateTimelineData(sections);
+		const totalSegments = (total - 1) * SECTION_SCROLL_UNITS + extraUnits;
+		const scrollDistance = (totalSegments + 1) * window.innerHeight;
 
-			scrollRoot.dataset.totalSegments = `${totalSegments}`;
-			scrollRoot.dataset.timelineSegments = `${timelineSegments}`;
-			scrollRoot.dataset.timelineUnits = `${timelineUnits}`;
-			scrollRoot.dataset.timelineExtraUnits = `${extraUnits}`;
-			scrollRoot.style.height = `${scrollDistance}px`;
-			console.log('[GSAP] scrollRoot height set', {
-				scrollDistance,
-				totalSegments,
-				timelineSegments,
-				timelineUnits,
-				extraUnits,
-				timelineEntries,
-				SECTION_SCROLL_UNITS,
-				TIMELINE_SCROLL_UNITS
-			});
-			return scrollDistance;
-		};
+		// Store in dataset for later retrieval
+		scrollRoot.dataset.totalSegments = String(totalSegments);
+		scrollRoot.dataset.timelineSegments = String(timelineSegments);
+		scrollRoot.dataset.timelineUnits = String(timelineUnits);
+		scrollRoot.dataset.timelineExtraUnits = String(extraUnits);
+		scrollRoot.style.height = `${scrollDistance}px`;
 
-		let scrollDistance = setHeight();
+		console.log('[GSAP] Scroll height calculated', {
+			scrollDistance,
+			totalSegments,
+			timelineSegments,
+			timelineUnits,
+			extraUnits
+		});
 
+		return scrollDistance;
+	}
+
+	// ============================================
+	// SECTION MANAGEMENT
+	// ============================================
+	function initializeSectionPositions(sections) {
 		sections.forEach((section, index) => {
 			const xOffset = index % 2 === 0 ? -60 : 60;
 			gsap.set(section, {
@@ -236,260 +237,301 @@ console.log('[Index] About showImage:', config.about.showImage);
 			});
 		});
 		gsap.set(sections[0], { autoAlpha: 1, y: 0, x: 0 });
+	}
 
-		// Initialize scroll progress ball
+	function calculateTargetSection(exactProgress, total) {
+		const rawFrac = exactProgress - Math.floor(exactProgress);
+		let targetIndex = Math.floor(exactProgress);
+
+		if (rawFrac < SECTION_TOLERANCE) {
+			targetIndex = Math.floor(exactProgress);
+		} else if (rawFrac > 1 - SECTION_TOLERANCE) {
+			targetIndex = Math.min(total - 1, Math.floor(exactProgress) + 1);
+		} else {
+			targetIndex = rawFrac < 0.5
+				? Math.floor(exactProgress)
+				: Math.min(total - 1, Math.floor(exactProgress) + 1);
+		}
+
+		return clamp(targetIndex, 0, total - 1);
+	}
+
+	function animateSection(section, index, isActive) {
+		const xOffset = index % 2 === 0 ? -60 : 60;
+
+		gsap.to(section, {
+			autoAlpha: isActive ? 1 : 0,
+			y: isActive ? 0 : 40,
+			x: isActive ? 0 : xOffset,
+			duration: 0.3,
+			ease: 'power2.out',
+			overwrite: true,
+		});
+	}
+
+	function updateSectionVisibility(sections, targetIndex, activeIndex) {
+		if (targetIndex === activeIndex) return activeIndex;
+
+		sections.forEach((section, i) => {
+			animateSection(section, i, i === targetIndex);
+		});
+
+		window.dispatchEvent(new CustomEvent('sectionchange', {
+			detail: { index: targetIndex }
+		}));
+
+		return targetIndex;
+	}
+
+	// ============================================
+	// PROGRESS CALCULATIONS
+	// ============================================
+	function calculateProgress(exactProgress, sections, scrollRoot) {
+		const timelineIndex = sections.findIndex(s => s.id === 'desktop-timeline');
+		const timelineUnits = getDatasetValue(
+			scrollRoot,
+			'timelineUnits',
+			String(TIMELINE_SCROLL_UNITS)
+		);
+		const timelineLength = timelineIndex >= 0 ? timelineUnits : SECTION_SCROLL_UNITS;
+		const timelineExtraUnits = getDatasetValue(scrollRoot, 'timelineExtraUnits', '0');
+
+		let mappedProgress = exactProgress / SECTION_SCROLL_UNITS;
+		let timelineProgress = 0;
+
+		if (timelineIndex >= 0) {
+			const timelineStart = timelineIndex * SECTION_SCROLL_UNITS;
+			const timelineEnd = timelineStart + timelineLength;
+
+			if (exactProgress < timelineStart) {
+				mappedProgress = exactProgress / SECTION_SCROLL_UNITS;
+				timelineProgress = 0;
+			} else if (exactProgress >= timelineStart && exactProgress <= timelineEnd) {
+				timelineProgress = (exactProgress - timelineStart) / timelineLength;
+				const transitionStart = timelineEnd - SECTION_SCROLL_UNITS;
+
+				if (exactProgress < transitionStart) {
+					mappedProgress = timelineIndex;
+				} else {
+					const transitionProgress = (exactProgress - transitionStart) / SECTION_SCROLL_UNITS;
+					mappedProgress = timelineIndex + transitionProgress;
+				}
+			} else {
+				mappedProgress = (exactProgress - timelineExtraUnits) / SECTION_SCROLL_UNITS;
+				timelineProgress = 1;
+			}
+		}
+
+		return { mappedProgress, timelineProgress };
+	}
+
+	// ============================================
+	// BACKGROUND ANIMATION
+	// ============================================
+	function calculateZoomProgress(currentSection, sectionProgress, isDesktop) {
+		if (currentSection !== 0) return { zoomProgress: 1, zoomScale: isDesktop ? ZOOM_END : 1.0 };
+
+		const zoomProgress = Math.min(1, sectionProgress / ZOOM_COMPLETION_POINT);
+		const zoomScale = isDesktop
+			? ZOOM_START + (ZOOM_END - ZOOM_START) * zoomProgress
+			: 1.0;
+
+		return { zoomProgress, zoomScale };
+	}
+
+	function calculateExitProgress(currentSection, sectionProgress) {
+		if (currentSection === 1) {
+			return Math.min(1, sectionProgress / EXIT_COMPLETION_POINT);
+		}
+		return currentSection >= 2 ? 1 : 0;
+	}
+
+	function updateBackgroundImage(backgroundImageLayer, currentSection, sectionProgress, isDesktop) {
+		backgroundImageLayer.style.backgroundPosition = 'right bottom';
+
+		const { zoomProgress, zoomScale } = calculateZoomProgress(currentSection, sectionProgress, isDesktop);
+		const exitProgress = calculateExitProgress(currentSection, sectionProgress);
+		const exitTranslate = exitProgress * EXIT_TRANSLATE_DISTANCE;
+
+		backgroundImageLayer.style.transform = `translateX(${exitTranslate}vw) scale(${zoomScale})`;
+
+		return { zoomProgress, exitProgress };
+	}
+
+	function updateOverlays(overlayFull, overlayGradient, currentSection, zoomProgress, exitProgress) {
+		const overlayTransitionProgress = currentSection === 0 ? zoomProgress : 1;
+
+		if (currentSection >= BACKGROUND_IMAGE_END_SECTION) {
+			// Section 2+: Hide everything
+			setElementVisibility(overlayFull, 0);
+			setElementVisibility(overlayGradient, 0);
+		} else if (currentSection === 1) {
+			// Section 1: Gradient visible, fades with exit
+			setElementVisibility(overlayFull, 0);
+			setElementVisibility(overlayGradient, 1 - exitProgress);
+		} else {
+			// Section 0: Transition from full to gradient
+			setElementVisibility(overlayFull, 1 - overlayTransitionProgress);
+			setElementVisibility(overlayGradient, overlayTransitionProgress);
+		}
+	}
+
+	function updateBackgroundLayers(clampedMappedProgress) {
+		const backgroundStage = document.getElementById('scroll-stage-bg');
+		if (!backgroundStage?.dataset.backgroundImage) return;
+
+		const backgroundImageLayer = backgroundStage.querySelector('.background-image-layer');
+		const overlayFull = backgroundStage.querySelector('.overlay-full');
+		const overlayGradient = backgroundStage.querySelector('.overlay-gradient');
+
+		if (!backgroundImageLayer) return;
+
+		const currentSection = Math.floor(clampedMappedProgress);
+		const sectionProgress = clampedMappedProgress - currentSection;
+		const isDesktop = window.innerWidth >= BREAKPOINT_MOBILE;
+
+		const { zoomProgress, exitProgress } = updateBackgroundImage(
+			backgroundImageLayer,
+			currentSection,
+			sectionProgress,
+			isDesktop
+		);
+
+		// Handle image visibility
+		if (currentSection >= BACKGROUND_IMAGE_END_SECTION) {
+			setElementVisibility(backgroundImageLayer, 0);
+		} else if (currentSection === 1) {
+			setElementVisibility(backgroundImageLayer, 1 - exitProgress);
+		} else {
+			backgroundImageLayer.style.opacity = '1';
+			backgroundImageLayer.style.visibility = 'visible';
+		}
+
+		updateOverlays(overlayFull, overlayGradient, currentSection, zoomProgress, exitProgress);
+	}
+
+	// ============================================
+	// PROGRESS BALL ANIMATION
+	// ============================================
+	function updateProgressBall(scrollProgress) {
+		const progressBall = document.getElementById('scroll-progress-ball');
+		if (!progressBall) return;
+
+		const maxX = window.innerWidth - 60;
+		const xPosition = scrollProgress * maxX;
+		const yPosition = 50 + Math.sin(scrollProgress * Math.PI * 4) * 30;
+
+		gsap.to(progressBall, {
+			x: xPosition,
+			y: yPosition,
+			duration: 0.1,
+			ease: 'none',
+			overwrite: true,
+		});
+	}
+
+	// ============================================
+	// NAVIGATION
+	// ============================================
+	function scrollToSection(sections, scrollRoot, scrollDistance, targetIndex) {
+		const total = sections.length;
+		const totalSegments = getDatasetValue(
+			scrollRoot,
+			'totalSegments',
+			String((total - 1) * SECTION_SCROLL_UNITS)
+		);
+		const timelineUnits = getDatasetValue(
+			scrollRoot,
+			'timelineUnits',
+			String(TIMELINE_SCROLL_UNITS)
+		);
+		const timelineIndex = sections.findIndex(s => s.id === 'desktop-timeline');
+		const extraUnits = Math.max(0, timelineUnits - SECTION_SCROLL_UNITS);
+		const step = (scrollDistance - window.innerHeight) / totalSegments;
+		const segment = timelineIndex >= 0 && targetIndex > timelineIndex
+			? targetIndex * SECTION_SCROLL_UNITS + extraUnits
+			: targetIndex * SECTION_SCROLL_UNITS;
+
+		window.scrollTo({
+			top: step * segment,
+			behavior: 'smooth',
+		});
+	}
+
+	function setupNavigation(sections, scrollRoot, scrollDistance) {
+		// Anchor link navigation
+		document.addEventListener('click', (e) => {
+			const anchor = e.target?.closest?.('a[href^="#"]');
+			if (!anchor) return;
+
+			e.preventDefault();
+			const href = anchor.getAttribute('href') || '';
+			const targetId = href.replace('#', '');
+			const targetIndex = sections.findIndex(s => s.id === targetId);
+
+			if (targetIndex !== -1) {
+				scrollToSection(sections, scrollRoot, scrollDistance, targetIndex);
+			}
+		});
+
+		// Custom event navigation
+		window.addEventListener('gotosection', (e) => {
+			const index = e.detail?.index;
+			if (typeof index === 'number') {
+				scrollToSection(sections, scrollRoot, scrollDistance, index);
+			}
+		});
+	}
+
+	// ============================================
+	// SCROLL TRIGGER SETUP
+	// ============================================
+	function createScrollTrigger(sections, scrollRoot, scrollStage, scrollDistance) {
+		const total = sections.length;
+		let activeIndex = 0;
+
 		const progressBall = document.getElementById('scroll-progress-ball');
 		if (progressBall) {
 			gsap.set(progressBall, { x: 0, y: 50 });
 		}
 
-		let activeIndex = 0;
-
-		const updateProgress = (exactProgress) => {
-			// Use threshold-based discrete switching like the timeline
-			// Calculate which section should be active based on progress with tolerance
-			const rawFrac = exactProgress - Math.floor(exactProgress);
-			let targetIndex = Math.floor(exactProgress);
-			
-			// Apply tolerance: only switch to next section after crossing the threshold
-			// This creates discrete sections that don't overlap
-			if (rawFrac < SECTION_TOLERANCE) {
-				// In the start tolerance zone: stay at current section
-				targetIndex = Math.floor(exactProgress);
-			} else if (rawFrac > 1 - SECTION_TOLERANCE) {
-				// In the end tolerance zone: switch to next section
-				targetIndex = Math.min(total - 1, Math.floor(exactProgress) + 1);
-			} else {
-				// In the transition zone: determine based on midpoint
-				targetIndex = rawFrac < 0.5 
-					? Math.floor(exactProgress)
-					: Math.min(total - 1, Math.floor(exactProgress) + 1);
-			}
-			
-			// Clamp to valid range
-			targetIndex = Math.max(0, Math.min(total - 1, targetIndex));
-
-			// Only update sections when the target index changes (discrete switching)
-			if (targetIndex !== activeIndex) {
-				activeIndex = targetIndex;
-				
-				// Hide all sections first
-				sections.forEach((section, i) => {
-					const xOffset = i % 2 === 0 ? -60 : 60;
-					if (i === activeIndex) {
-						// Show active section
-						gsap.to(section, {
-							autoAlpha: 1,
-							y: 0,
-							x: 0,
-							duration: 0.3,
-							ease: 'power2.out',
-							overwrite: true,
-						});
-					} else {
-						// Hide inactive sections
-						gsap.to(section, {
-							autoAlpha: 0,
-							y: 40,
-							x: xOffset,
-							duration: 0.3,
-							ease: 'power2.out',
-							overwrite: true,
-						});
-					}
-				});
-
-				window.dispatchEvent(new CustomEvent('sectionchange', {
-					detail: { index: activeIndex }
-				}));
-			}
-		};
-
 		ScrollTrigger.create({
 			trigger: scrollRoot,
 			start: 'top top',
 			end: () => `+=${scrollDistance - window.innerHeight}`,
-			scrub: 2, // Increased for smoother, slower transitions
+			scrub: 2,
 			pin: scrollStage,
 			anticipatePin: 1,
 			snap: false,
 			onUpdate: (self) => {
-				const totalSegments = parseInt(
-					scrollRoot.dataset.totalSegments || `${(total - 1) * SECTION_SCROLL_UNITS}`,
-					10
+				const totalSegments = getDatasetValue(
+					scrollRoot,
+					'totalSegments',
+					String((total - 1) * SECTION_SCROLL_UNITS)
 				);
-				const timelineSegments = parseInt(scrollRoot.dataset.timelineSegments || '1', 10);
-				const timelineUnits = parseInt(
-					scrollRoot.dataset.timelineUnits || `${timelineSegments * TIMELINE_SCROLL_UNITS}`,
-					10
-				);
-				const timelineExtraUnits = parseInt(
-					scrollRoot.dataset.timelineExtraUnits || '0',
-					10
-				);
-				const timelineIndex = sections.findIndex((section) => section.id === 'timeline');
-				const timelineLength = timelineIndex >= 0 ? timelineUnits : SECTION_SCROLL_UNITS;
 
 				const exactProgress = self.progress * totalSegments;
-				let mappedProgress = exactProgress / SECTION_SCROLL_UNITS;
-				let timelineProgress = 0;
+				const { mappedProgress, timelineProgress } = calculateProgress(
+					exactProgress,
+					sections,
+					scrollRoot
+				);
 
-				if (timelineIndex >= 0) {
-					const timelineStart = timelineIndex * SECTION_SCROLL_UNITS;
-					const timelineEnd = timelineStart + timelineLength;
+				const clampedMappedProgress = clamp(mappedProgress, 0, total - 1);
+				const clampedTimelineProgress = clamp(timelineProgress, 0, 1);
 
-					if (exactProgress < timelineStart) {
-						// Before timeline: normal section progression
-						mappedProgress = exactProgress / SECTION_SCROLL_UNITS;
-						timelineProgress = 0;
-					} else if (exactProgress >= timelineStart && exactProgress <= timelineEnd) {
-						// During timeline: keep section index at timeline, only update timeline progress
-						timelineProgress = (exactProgress - timelineStart) / timelineLength;
-						// Keep mappedProgress at timelineIndex during the entire timeline scroll
-						// Only start transitioning to next section at the very end
-						const transitionStart = timelineEnd - SECTION_SCROLL_UNITS;
-						if (exactProgress < transitionStart) {
-							mappedProgress = timelineIndex;
-						} else {
-							// Transition to next section in the last SECTION_SCROLL_UNITS of timeline
-							const transitionProgress = (exactProgress - transitionStart) / SECTION_SCROLL_UNITS;
-							mappedProgress = timelineIndex + transitionProgress;
-						}
-					} else {
-						// After timeline: account for extra units and continue normal progression
-						mappedProgress = (exactProgress - timelineExtraUnits) / SECTION_SCROLL_UNITS;
-						timelineProgress = 1;
-					}
-				}
+				// Update background layers
+				updateBackgroundLayers(clampedMappedProgress);
 
-				// Clamp mappedProgress to ensure we can reach all sections
-				const clampedMappedProgress = Math.max(0, Math.min(total - 1, mappedProgress));
-				const clampedTimelineProgress = Math.max(0, Math.min(1, timelineProgress));
-				
-				// Animate background focal point and handle image/overlay visibility
-				const backgroundStage = document.getElementById('scroll-stage-bg');
-				const backgroundImageLayer = backgroundStage?.querySelector('.background-image-layer');
-				const overlayFull = backgroundStage?.querySelector('.overlay-full');
-				const overlayGradient = backgroundStage?.querySelector('.overlay-gradient');
-				const hasBackground = backgroundStage?.dataset.backgroundImage;
-				
-				if (backgroundImageLayer && hasBackground) {
-					const currentSection = Math.floor(clampedMappedProgress);
-					const sectionProgress = clampedMappedProgress - currentSection;
-					// Keep the image aligned to right/bottom with cover sizing.
-					// Cropping is allowed on top/left to preserve aspect ratio.
-					backgroundImageLayer.style.backgroundPosition = 'right bottom';
-					
-					// Zoom behavior: completes by 70% through section 0 (before section 1 content appears)
-					// Only apply zoom on desktop (>= 1024px)
-					const isDesktop = window.innerWidth >= 1024;
-					const zoomStart = 1.0;
-					const zoomEnd = 1.5;
-					const zoomProgress = currentSection === 0
-						? Math.min(1, sectionProgress / 0.7) // Complete zoom by 70% of section 0
-						: 1;
-					const zoomScale = isDesktop ? zoomStart + (zoomEnd - zoomStart) * zoomProgress : 1.0;
+				// Update section visibility
+				const targetIndex = calculateTargetSection(clampedMappedProgress, total);
+				activeIndex = updateSectionVisibility(sections, targetIndex, activeIndex);
 
-					// Exit animation: image slides left and fades out during section 1
-					// Starts immediately at section 1, completes by 60% (before section 2 content appears)
-					const exitProgress = currentSection === 1
-						? Math.min(1, sectionProgress / 0.6)
-						: (currentSection >= 2 ? 1 : 0);
-					
-					// Image slides left as it exits - always apply based on exit progress
-					// No rightward movement ever - exitTranslate is always 0 or negative
-					const exitTranslate = exitProgress * -40; // vw, negative = left
+				// Update progress ball
+				updateProgressBall(self.progress);
 
-					backgroundImageLayer.style.transform = `translateX(${exitTranslate}vw) scale(${zoomScale})`;
-
-					// ============================================
-					// OVERLAY ANIMATION SYSTEM
-					// ============================================
-					// Section 0: Full overlay transitions to gradient overlay AS ZOOM PROGRESSES
-					//   - Zoom completes at 70% through section 0
-					//   - By zoom completion, full overlay is gone, gradient is fully visible
-					//   - Right side of screen is clear (no overlay) once zoom is done
-					// Section 1: Gradient overlay visible, fades out with exit animation
-					// Section 2+: Everything hidden
-					// ============================================
-					
-					// Overlay transition synced with zoom (completes when zoom completes at 70% of section 0)
-					const overlayTransitionProgress = currentSection === 0 
-						? zoomProgress  // Synced with zoom (0 to 1 as zoom completes)
-						: 1;            // Fully transitioned in section 1+
-					
-					if (currentSection >= BACKGROUND_IMAGE_END_SECTION) {
-						// Section 2+: Hide everything
-						backgroundImageLayer.style.opacity = '0';
-						backgroundImageLayer.style.visibility = 'hidden';
-						if (overlayFull) {
-							overlayFull.style.opacity = '0';
-							overlayFull.style.visibility = 'hidden';
-						}
-						if (overlayGradient) {
-							overlayGradient.style.opacity = '0';
-							overlayGradient.style.visibility = 'hidden';
-						}
-					} else if (currentSection === 1) {
-						// Section 1: Gradient overlay visible, fades out with exit animation
-						const imageOpacity = 1 - exitProgress;
-						backgroundImageLayer.style.opacity = `${imageOpacity}`;
-						backgroundImageLayer.style.visibility = imageOpacity > 0.01 ? 'visible' : 'hidden';
-						
-						// Full overlay: already gone by section 1
-						if (overlayFull) {
-							overlayFull.style.opacity = '0';
-							overlayFull.style.visibility = 'hidden';
-						}
-						
-						// Gradient overlay: visible, fades out with exit
-						if (overlayGradient) {
-							const gradientOpacity = 1 - exitProgress;
-							overlayGradient.style.opacity = `${gradientOpacity}`;
-							overlayGradient.style.visibility = gradientOpacity > 0.01 ? 'visible' : 'hidden';
-						}
-					} else {
-						// Section 0: Transition from full overlay to gradient as zoom progresses
-						backgroundImageLayer.style.opacity = '1';
-						backgroundImageLayer.style.visibility = 'visible';
-						
-						// Full overlay: fades out as zoom progresses
-						if (overlayFull) {
-							const fullOverlayOpacity = 1 - overlayTransitionProgress;
-							overlayFull.style.opacity = `${fullOverlayOpacity}`;
-							overlayFull.style.visibility = fullOverlayOpacity > 0.01 ? 'visible' : 'hidden';
-						}
-						
-						// Gradient overlay: fades in as zoom progresses
-						if (overlayGradient) {
-							overlayGradient.style.opacity = `${overlayTransitionProgress}`;
-							overlayGradient.style.visibility = overlayTransitionProgress > 0.01 ? 'visible' : 'hidden';
-						}
-					}
-				}
-				
-				// console.log('[GSAP] progress', self.progress.toFixed(3), 'exact', exactProgress.toFixed(2), 'mapped', clampedMappedProgress.toFixed(2), 'timeline', clampedTimelineProgress.toFixed(3));
-				updateProgress(clampedMappedProgress);
-
-				// Update animated ball based on scroll progress (like timeline progress bar)
-				const progressBall = document.getElementById('scroll-progress-ball');
-				if (progressBall) {
-					const scrollProgress = self.progress; // 0 to 1
-					// Animate ball position horizontally across the screen
-					const maxX = window.innerWidth - 60; // Account for ball width
-					const xPosition = scrollProgress * maxX;
-					// Also add some vertical movement for visual interest
-					const yPosition = 50 + Math.sin(scrollProgress * Math.PI * 4) * 30;
-					
-					gsap.to(progressBall, {
-						x: xPosition,
-						y: yPosition,
-						duration: 0.1,
-						ease: 'none',
-						overwrite: true,
-					});
-				}
-
+				// Dispatch timeline progress event
+				const timelineIndex = sections.findIndex(s => s.id === 'desktop-timeline');
 				if (timelineIndex >= 0) {
 					window.dispatchEvent(new CustomEvent('timelineprogress', {
 						detail: { progress: clampedTimelineProgress }
@@ -497,119 +539,151 @@ console.log('[Index] About showImage:', config.about.showImage);
 				}
 			},
 		});
+	}
 
+	// ============================================
+	// DESKTOP SCROLL EXPERIENCE
+	// ============================================
+	function initDesktopScrollExperience(scrollRoot, scrollStage, sections) {
+		console.log('[GSAP] Desktop detected - initializing GSAP scroll experience');
+
+		const scrollDistance = calculateScrollHeight(sections, scrollRoot);
+		initializeSectionPositions(sections);
+		createScrollTrigger(sections, scrollRoot, scrollStage, scrollDistance);
+		setupNavigation(sections, scrollRoot, scrollDistance);
+
+		// Handle window resize
 		window.addEventListener('resize', () => {
-			scrollDistance = setHeight();
+			calculateScrollHeight(sections, scrollRoot);
 			ScrollTrigger.refresh();
-		});
-
-		// Nav link handling
-		document.addEventListener('click', (e) => {
-			const target = e.target;
-			const anchor = target && target.closest ? target.closest('a[href^="#"]') : null;
-			if (!anchor) return;
-			e.preventDefault();
-			const href = anchor.getAttribute('href') || '';
-			const targetId = href.replace('#', '');
-			const targetIndex = sections.findIndex((section) => section.id === targetId);
-			if (targetIndex !== -1) {
-				const totalSegments = parseInt(
-					scrollRoot.dataset.totalSegments || `${(total - 1) * SECTION_SCROLL_UNITS}`,
-					10
-				);
-				const timelineSegments = parseInt(scrollRoot.dataset.timelineSegments || '1', 10);
-				const timelineUnits = parseInt(
-					scrollRoot.dataset.timelineUnits || `${timelineSegments * TIMELINE_SCROLL_UNITS}`,
-					10
-				);
-				const timelineIndex = sections.findIndex((section) => section.id === 'timeline');
-				const extraUnits = Math.max(0, timelineUnits - SECTION_SCROLL_UNITS);
-				const step = (scrollDistance - window.innerHeight) / totalSegments;
-				const segment = timelineIndex >= 0 && targetIndex > timelineIndex
-					? targetIndex * SECTION_SCROLL_UNITS + extraUnits
-					: targetIndex * SECTION_SCROLL_UNITS;
-				window.scrollTo({
-					top: step * segment,
-					behavior: 'smooth',
-				});
-			}
-		});
-
-		window.addEventListener('gotosection', (e) => {
-			const detail = e.detail || {};
-			if (typeof detail.index === 'number') {
-				const totalSegments = parseInt(
-					scrollRoot.dataset.totalSegments || `${(total - 1) * SECTION_SCROLL_UNITS}`,
-					10
-				);
-				const timelineSegments = parseInt(scrollRoot.dataset.timelineSegments || '1', 10);
-				const timelineUnits = parseInt(
-					scrollRoot.dataset.timelineUnits || `${timelineSegments * TIMELINE_SCROLL_UNITS}`,
-					10
-				);
-				const timelineIndex = sections.findIndex((section) => section.id === 'timeline');
-				const extraUnits = Math.max(0, timelineUnits - SECTION_SCROLL_UNITS);
-				const step = (scrollDistance - window.innerHeight) / totalSegments;
-				const segment = timelineIndex >= 0 && detail.index > timelineIndex
-					? detail.index * SECTION_SCROLL_UNITS + extraUnits
-					: detail.index * SECTION_SCROLL_UNITS;
-				window.scrollTo({
-					top: step * segment,
-					behavior: 'smooth',
-				});
-			}
 		});
 	}
 
+	// ============================================
+	// MOBILE SCROLL EXPERIENCE
+	// ============================================
+	function resetMobileStyles(sections, scrollRoot) {
+		console.log('[GSAP] Mobile detected - using CSS card stacking');
+
+		sections.forEach(section => {
+			gsap.set(section, { clearProps: 'all' });
+		});
+
+		scrollRoot.style.height = 'auto';
+	}
+
+	function initMobileBackgroundFade() {
+		if (!isMobile()) return;
+
+		const backgroundImageLayer = document.querySelector('.background-image-layer');
+		const overlayFull = document.querySelector('.overlay-full');
+		const overlayGradient = document.querySelector('.overlay-gradient');
+		const baseBackground = document.querySelector('.base-background');
+		const heroSection = document.getElementById('home');
+		const aboutSection = document.getElementById('about');
+		const skillsSection = document.getElementById('skills');
+
+		if (!heroSection || !aboutSection) return;
+
+		function updateBackgroundOnScroll() {
+			if (!isMobile()) return;
+
+			const scrollY = window.scrollY;
+			const heroHeight = heroSection.offsetHeight;
+			const aboutTop = aboutSection.offsetTop;
+			const aboutHeight = aboutSection.offsetHeight;
+			const skillsTop = skillsSection?.offsetTop || (aboutTop + aboutHeight);
+
+			// Phase 1: Overlay transition during Hero
+			const overlayTransitionEnd = heroHeight * ZOOM_COMPLETION_POINT;
+			const overlayProgress = clamp(scrollY / overlayTransitionEnd, 0, 1);
+
+			// Phase 2: Background fade when entering Skills
+			const fadeStart = aboutTop + (aboutHeight * 0.5);
+			const fadeEnd = skillsTop + (window.innerHeight * 0.3);
+			const fadeProgress = scrollY > fadeStart
+				? Math.min(1, (scrollY - fadeStart) / (fadeEnd - fadeStart))
+				: 0;
+
+			// Apply overlay transitions
+			setElementVisibility(overlayFull, (1 - overlayProgress) * (1 - fadeProgress));
+			setElementVisibility(overlayGradient, overlayProgress * (1 - fadeProgress));
+			setElementVisibility(backgroundImageLayer, 1 - fadeProgress);
+
+			if (baseBackground) {
+				baseBackground.style.opacity = '1';
+			}
+		}
+
+		window.addEventListener('scroll', updateBackgroundOnScroll, { passive: true });
+		updateBackgroundOnScroll();
+	}
+
+	// ============================================
+	// TIMELINE VISIBILITY
+	// ============================================
 	function handleTimelineVisibility() {
-		const desktop = document.querySelector('#timeline');
+		const desktop = document.querySelector('#desktop-timeline');
 		const mobile = document.querySelector('#mobile-timeline');
-		
+
 		if (!desktop || !mobile) {
 			console.warn('[Timeline] Could not find timeline elements');
 			return;
 		}
-		
+
 		const mobileMode = isMobile();
-		
+
 		if (mobileMode) {
-			// Mobile: hide desktop, show mobile
-			// Use !important to override Tailwind classes
 			desktop.style.setProperty('display', 'none', 'important');
 			mobile.style.setProperty('display', 'flex', 'important');
-			console.log('[Timeline] Showing mobile timeline, hiding desktop');
+			console.log('[Timeline] Showing mobile timeline');
 		} else {
-			// Desktop: hide mobile, show desktop
 			mobile.style.setProperty('display', 'none', 'important');
 			desktop.style.setProperty('display', 'flex', 'important');
-			console.log('[Timeline] Showing desktop timeline, hiding mobile');
+			console.log('[Timeline] Showing desktop timeline');
 		}
 	}
 
-	// Track current mode to detect changes
-	let currentMode = isMobile() ? 'mobile' : 'desktop';
+	// ============================================
+	// MAIN INITIALIZATION
+	// ============================================
+	function initScrollExperience() {
+		const scrollRoot = document.querySelector('#scroll-root');
+		const scrollStage = document.querySelector('.scroll-stage');
+		const sections = Array.from(document.querySelectorAll('.scroll-panel'));
 
-	function init() {
-		// Set timeline visibility before initializing scroll experience
-		handleTimelineVisibility();
-		initScrollExperience();
+		if (!scrollRoot || !scrollStage || !sections.length) {
+			return;
+		}
+
+		if (isMobile()) {
+			resetMobileStyles(sections, scrollRoot);
+			return;
+		}
+
+		initDesktopScrollExperience(scrollRoot, scrollStage, sections);
 	}
 
-	// Handle resize to switch between mobile and desktop modes
+	function init() {
+		handleTimelineVisibility();
+		initScrollExperience();
+		initMobileBackgroundFade();
+	}
+
+	// ============================================
+	// RESPONSIVE HANDLING
+	// ============================================
+	let currentMode = isMobile() ? 'mobile' : 'desktop';
+
 	function handleResize() {
 		const newMode = isMobile() ? 'mobile' : 'desktop';
-		
+
 		if (newMode !== currentMode) {
 			console.log(`[GSAP] Mode changed: ${currentMode} -> ${newMode}`);
 			currentMode = newMode;
-			
-			// Update timeline visibility
+
 			handleTimelineVisibility();
-			
-			// Kill existing ScrollTrigger instances
 			ScrollTrigger.getAll().forEach(st => st.kill());
-			
-			// Re-initialize with new mode
 			initScrollExperience();
 		}
 	}
@@ -618,102 +692,21 @@ console.log('[Index] About showImage:', config.about.showImage);
 	let resizeTimeout;
 	window.addEventListener('resize', () => {
 		clearTimeout(resizeTimeout);
-		resizeTimeout = setTimeout(handleResize, 150);
+		resizeTimeout = setTimeout(handleResize, RESIZE_DEBOUNCE_MS);
 	});
 
+	// Initialize on load
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', init);
 	} else {
 		setTimeout(init, 50);
-	}
-
-	// Mobile scroll handler for background fade
-	// Matches desktop behavior: overlay transitions during Hero, background fades when entering Skills
-	function initMobileBackgroundFade() {
-		if (!isMobile()) return;
-		
-		const backgroundImageLayer = document.querySelector('.background-image-layer');
-		const overlayFull = document.querySelector('.overlay-full');
-		const overlayGradient = document.querySelector('.overlay-gradient');
-		const baseBackground = document.querySelector('.base-background');
-		const heroSection = document.getElementById('home');
-		const aboutSection = document.getElementById('about');
-		const skillsSection = document.getElementById('skills');
-		
-		if (!heroSection || !aboutSection) return;
-
-		function updateBackgroundOnScroll() {
-			if (!isMobile()) return;
-			
-			const scrollY = window.scrollY;
-			const heroHeight = heroSection.offsetHeight;
-			const aboutTop = aboutSection.offsetTop;
-			const aboutHeight = aboutSection.offsetHeight;
-			const skillsTop = skillsSection ? skillsSection.offsetTop : aboutTop + aboutHeight;
-			
-			// Phase 1: Overlay transition (during Hero section)
-			// Full overlay transitions to gradient overlay by 70% of Hero scroll
-			const overlayTransitionEnd = heroHeight * 0.7;
-			
-			let overlayProgress = 0;
-			if (scrollY > 0 && scrollY < overlayTransitionEnd) {
-				overlayProgress = scrollY / overlayTransitionEnd;
-			} else if (scrollY >= overlayTransitionEnd) {
-				overlayProgress = 1;
-			}
-			
-			// Phase 2: Background fade out (when Skills section starts covering About)
-			// Background stays visible through Hero and About, fades when entering Skills
-			const fadeStart = aboutTop + (aboutHeight * 0.5);
-			const fadeEnd = skillsTop + (window.innerHeight * 0.3);
-			
-			let fadeProgress = 0;
-			if (scrollY > fadeStart) {
-				fadeProgress = Math.min(1, (scrollY - fadeStart) / (fadeEnd - fadeStart));
-			}
-			
-			// Apply overlay transitions (same as desktop)
-			if (overlayFull) {
-				const fullOpacity = (1 - overlayProgress) * (1 - fadeProgress);
-				overlayFull.style.opacity = String(Math.max(0, fullOpacity));
-				overlayFull.style.visibility = fullOpacity > 0.01 ? 'visible' : 'hidden';
-			}
-			
-			if (overlayGradient) {
-				const gradientOpacity = overlayProgress * (1 - fadeProgress);
-				overlayGradient.style.opacity = String(Math.max(0, gradientOpacity));
-				overlayGradient.style.visibility = gradientOpacity > 0.01 ? 'visible' : 'hidden';
-			}
-			
-			// Fade out background image when entering Skills
-			if (backgroundImageLayer) {
-				const bgOpacity = 1 - fadeProgress;
-				backgroundImageLayer.style.opacity = String(Math.max(0, bgOpacity));
-				backgroundImageLayer.style.visibility = bgOpacity > 0.01 ? 'visible' : 'hidden';
-			}
-			
-			// Base background stays visible
-			if (baseBackground) {
-				baseBackground.style.opacity = '1';
-			}
-		}
-
-		window.addEventListener('scroll', updateBackgroundOnScroll, { passive: true });
-		updateBackgroundOnScroll(); // Initial call
-	}
-
-	// Initialize mobile background fade
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', initMobileBackgroundFade);
-	} else {
-		initMobileBackgroundFade();
 	}
 </script>
 
 <style>
 
 @media (max-width: 1024px) {
-    #timeline {
+    #mobile-timeline {
         position: relative !important; /* Remove sticky */
         min-height: auto !important;
     }

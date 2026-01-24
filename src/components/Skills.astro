@@ -28,10 +28,10 @@ const {
 } = Astro.props;
 ---
 
-<section id="skills" class="container skills min-h-screen w-full flex">
-	<div class="w-full flex flex-col items-center lg:justify-center gap-9">
+<section id="skills" class="container skills min-h-screen w-full flex h-full">
+	<div class="w-full flex flex-col items-center lg:justify-center gap-9 h-full">
 		<SectionTitle number="02" title="Skills & Technologies" />
-		<div class="skills-grid">
+		<div class="skills-grid overflow-auto pb-96 lg:pb-0 no-scrollbar">
 			{categories.map((category) => (
 				<div class="skill-category">
 					<h3 class="category-title">{category.title}</h3>

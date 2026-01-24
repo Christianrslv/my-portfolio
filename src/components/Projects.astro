@@ -164,7 +164,7 @@ if (propCategories && propCategories.length > 0) {
       </div>
 
       <!-- Tab Panels -->
-      <div class="project-panels">
+      <div class="project-panels no-scrollbar">
         {categories.map((category, index) => (
           <div
             id={`panel-${category.id}`}
@@ -192,8 +192,6 @@ if (propCategories && propCategories.length > 0) {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
   }
 
   .project-panels::-webkit-scrollbar {

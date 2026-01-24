@@ -8,47 +8,58 @@ const { class: className } = Astro.props;
 ---
 
 <section
-	id="timeline"
-	class=`${className} timeline-horizontal scroll-panel flex min-h-screen w-full items-start justify-start`
+	id="mobile-timeline"
+	class=`${className} timeline-horizontal scroll-panel lg:hidden scroll-panel flex min-h-screen w-full items-center justify-center z-80! bg-(--bg-primary)`
 	data-timeline-entries={timelineEntries.length}
 >
-	<div class="container relative pt-0!">
+	<div class="max-w-full relative pt-0!">
     <!-- Fixed header with year + progress bar -->
-    <div class="journey-timeline-header sticky top-0 pt-6 z-10 flex flex-col gap-1 pb-4">
+    <div class="journey-timeline-header sticky top-0 pt-6 z-10 flex flex-col gap-1 pb-4 h-full">
       <SectionTitle number="05" title="Journey Timeline" />
         <div class="timeline-section-header">
-          <div class="header-content">
-            <span class="section-year">{formatTimelineDate('2019')}</span>
-            <div class="section-progress-bar">
-              <div class="section-progress-fill" data-section={0}></div>
+          <div class="header-content flex flex-col gap-2">
+            <div class="flex justify-between">
+              <span class="section-year-current font-serif">{formatTimelineDate('2019')}</span>
+              <span class="section-year-next font-serif">{formatTimelineDate('2022')}</span>
+            </div>
+            <div class="flex w-full">
+              <div class="section-progress-bar w-full flex gap-2">
+                <div class="section-progress-fill rounded-none!" data-section={0}></div>
+              </div>
             </div>
           </div>
         </div>
     </div>
 		<!-- MOBILE: Vertical Sections with Progress Tracking -->
-		<div class="timeline-container mobile-timeline">
-			{timelineEntries.map((entry, index) => {
-				const EntryContent = entry.Content;
-				return (
-					<div class="timeline-section" data-index={index} data-year={entry.date}>
-						<!-- Scrollable content for this year -->
-						<div class="timeline-section-content">
-							<div class="content-card">
-								<div class="content-header">
-									<div class="content-meta">
-										<span class="content-category">{entry.category}</span>
-									</div>
-									<h2 class="content-title">{entry.title}</h2>
-								</div>
-								<div class="content-body">
-									{EntryContent && <EntryContent />}
-								</div>
-							</div>
-						</div>
-					</div>
-				);
-			})}
-		</div>
+     <div class="container">
+       <div class="timeline-container mobile-timeline flex flex-col gap-4">
+         {timelineEntries.map((entry, index) => {
+           const EntryContent = entry.Content;
+           return (
+             <div class="flex items-center justify-center pb-10">
+               <span class="text-5xl font-serif">{formatTimelineDate(entry.date)}</span>
+             </div>
+           
+             <div class="timeline-section pb-40" data-index={index} data-year={entry.date} data-next-year={timelineEntries[index + 1]?.date}>
+               <!-- Scrollable content for this year -->
+               <div class="timeline-section-content">
+                 <div class="content-card">
+                   <div class="content-header">
+                     <div class="content-meta">
+                       <span class="content-category">{entry.category}</span>
+                     </div>
+                     <h2 class="content-title">{entry.title}</h2>
+                   </div>
+                   <div class="content-body">
+                     {EntryContent && <EntryContent />}
+                   </div>
+                 </div>
+               </div>
+             </div>
+           );
+         })}
+       </div>
+     </div>
 	</div>
 </section>
 
@@ -66,6 +77,7 @@ const { class: className } = Astro.props;
 		mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
 		-webkit-mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
 		z-index: -1;
+    border-radius: 20px 20px 0 0;
 	}
   .timeline-bg {
 		background: rgba(255, 255, 255, 0.25);
@@ -540,12 +552,12 @@ const { class: className } = Astro.props;
 		}
 		
 		/* Year label - prominent */
-		.section-year {
+		.section-year-current, .section-year-next {
 			display: block;
 			font-size: 1.125rem;
 			font-weight: 500;
 			color: var(--text-primary);
-			font-family: 'JetBrains Mono', monospace;
+			/* font-family: var(--font-libre-baskerville); */
 			letter-spacing: 0.05em;
 		}
 		
@@ -577,7 +589,6 @@ const { class: className } = Astro.props;
 		/* Scrollable content area */
 		.timeline-section-content {
 			min-height: 60vh; /* Ensure enough scroll distance */
-			padding-bottom: 2rem;
 		}
 		
 	}
@@ -606,10 +617,13 @@ const { class: className } = Astro.props;
 		const sections = document.querySelectorAll('.timeline-section');
 		const triggers = []; // Store triggers for cleanup
     const progressFill = document.querySelector('.section-progress-fill');
-		const sectionYear = document.querySelector('.section-year');
+		const sectionYearCurrent = document.querySelector('.section-year-current');
+		const sectionYearNext = document.querySelector('.section-year-next');
+    
 
 		sections.forEach((section, index) => {
 			let year = section.dataset.year;
+			let nextYear = section.dataset.nextYear;
 			console.log(`[Timeline] Year: ${year}`);
 			if (!progressFill) {
 				console.warn(`[Timeline] No progress fill found for section ${index}`);
@@ -619,8 +633,8 @@ const { class: className } = Astro.props;
 			// Create ScrollTrigger for this section
 			const trigger = ScrollTrigger.create({
 				trigger: section,
-				start: 'top', // When section header reaches sticky position
-				end: 'bottom', // When section bottom passes sticky position
+				start: 'top 50%', // When section header reaches sticky position
+				end: 'bottom 50%', // When section bottom passes sticky position
 				scrub: 0.3, // Smooth animation with slight delay
 				onUpdate: (self) => {
 					// Animate progress line 0% → 100% as user scrolls through section
@@ -633,8 +647,9 @@ const { class: className } = Astro.props;
 					// }
 
           // Update year display when entering a new section
-          if (sectionYear && sectionYear.textContent !== year) {
-            sectionYear.textContent = year;
+          if (sectionYearCurrent && sectionYearCurrent.textContent !== year) {
+            sectionYearCurrent.textContent = year;
+            sectionYearNext.textContent = nextYear;
             // console.log(`[Timeline] Updated year display to: ${year}`);
           }
 
@@ -676,8 +691,6 @@ const { class: className } = Astro.props;
 			if (triggers) {
 				mobileScrollTriggers = triggers;
 			}
-		} else {
-			initDesktopTimeline();
 		}
 	}
 	

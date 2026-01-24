@@ -12,7 +12,7 @@ export const portfolioConfig = {
 			{ label: 'About', href: '#about' },
 			{ label: 'Skills', href: '#skills' },
 			{ label: 'Projects', href: '#projects' },
-			{ label: 'Timeline', href: '#timeline' },
+			{ label: 'Timeline', href: '#desktop-timeline' },
 			{ label: 'Contact', href: '#contact' },
 		],
 	},

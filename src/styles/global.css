@@ -15,6 +15,8 @@
   --color-accent-primary: #b5d4e8;
   --color-accent-secondary: #D97757;
   --color-text-secondary: #1e3a5f;
+  
+  --font-libre-baskerville: 'Libre Baskerville', serif;
 }
 
 @theme dark {
@@ -32,6 +34,11 @@ html {
 
 html::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 /* Container with responsive padding across all custom breakpoints */
