@@ -1,9 +1,9 @@
 ---
-title: "SaaS Platform"
+title: "Universo Organico"
 description: "A collaborative project building a modern SaaS application with subscription management and analytics dashboard."
-technologies: ["Next.js", "PostgreSQL", "Stripe"]
+technologies: ["Java", "JavaScript", "Spring", "PostgreSQL", "Docker", "Angular", "React"]
 category: "ventures"
-projectUrl: "#"
+projectUrl: "https://universoorganiconv.com.br/"
 codeUrl: "#"
 featured: true
 ---

@@ -1,4 +1,4 @@
 ---
 title: "Frontend"
-skills: ["React", "JavaScript", "Next.js", "Astro", "Tailwind CSS", "Liquid"]
+skills: ["JavaScript", "Tailwind CSS", "Liquid", "React", "Next.js", "Astro"]
 ---

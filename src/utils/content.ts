@@ -31,7 +31,10 @@ export async function getPortfolioContent() {
 		}
 		
 		const aboutEntries = await getCollection('about');
+		console.log('[Content] About entries found:', aboutEntries.length);
+		console.log('[Content] About entry IDs:', aboutEntries.map(e => e.id));
 		const about = aboutEntries.find(entry => entry.id === 'index');
+		console.log('[Content] About entry found:', !!about);
 		
 		const projectEntries = await getCollection('projects');
 		const projects = projectEntries
@@ -52,9 +55,38 @@ export async function getPortfolioContent() {
 		const contact = contactEntries.find(entry => entry.id === 'index');
 		
 		// Parse about paragraphs from body
-		const aboutParagraphs = about?.body 
-			? about.body.split('\n\n').filter(p => p.trim())
-			: [];
+		// In Astro Content Collections, we need to render() to get the content
+		let aboutParagraphs: string[] = [];
+		if (about) {
+			try {
+				const rendered = await about.render();
+				// The render() method returns an object with a Content component
+				// We need to render it to HTML string to extract text
+				// For now, let's try accessing the raw markdown if available
+				// Otherwise, we'll need to render the component
+				
+				// Check if entry has rawBody (some Astro versions expose this)
+				if ('rawBody' in about && typeof (about as any).rawBody === 'string') {
+					aboutParagraphs = (about as any).rawBody
+						.split('\n\n')
+						.map((p: string) => p.trim())
+						.filter((p: string) => p.length > 0 && !p.startsWith('---'));
+					console.log('[Content] About paragraphs from rawBody:', aboutParagraphs.length);
+				} else {
+					// Fallback: render the component and extract text
+					// This is a workaround - ideally we'd have rawBody
+					console.warn('[Content] rawBody not available, trying alternative method');
+					// For now, return empty array - the simple loader should handle this
+					aboutParagraphs = [];
+				}
+				console.log('[Content] About paragraphs:', aboutParagraphs);
+			} catch (error) {
+				console.error('[Content] Error processing about content:', error);
+				aboutParagraphs = [];
+			}
+		} else {
+			console.warn('[Content] About entry not found!');
+		}
 
 		const result = {
 			hero: hero ? {
@@ -73,7 +105,7 @@ export async function getPortfolioContent() {
 				backgroundImage: hero.data.backgroundImage,
 			} : null,
 			about: about ? {
-				paragraphs: aboutParagraphs,
+				paragraphs: aboutParagraphs.length > 0 ? aboutParagraphs : undefined,
 				showImage: about.data.showImage ?? true,
 				imageUrl: about.data.imageUrl,
 				imageAlt: about.data.imageAlt || 'Profile photo',

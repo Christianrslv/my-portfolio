@@ -10,14 +10,30 @@ export async function getPortfolioContentSimple() {
 		const heroFile = Object.values(heroFiles).find((file: any) => file.frontmatter);
 		const hero = heroFile?.frontmatter;
 
-		// Load about
-		const aboutFiles = import.meta.glob<{ frontmatter: any; default: any }>('../content/about/*.md', { eager: true });
+		// Load about - use glob to get both frontmatter and raw content
+		const aboutFiles = import.meta.glob<{ frontmatter: any }>('../content/about/*.md', { eager: true });
+		const aboutRawFiles = import.meta.glob<string>('../content/about/*.md?raw', { eager: true, import: 'default' });
+		
 		const aboutFile = aboutFiles['../content/about/index.md'];
-		const aboutContent = aboutFile?.default?.render?.() || '';
-		const aboutParagraphs = aboutContent
-			? aboutContent.split('\n\n').filter((p: string) => p.trim() && !p.startsWith('#'))
-			: [];
+		const aboutRawContent = aboutRawFiles['../content/about/index.md?raw'];
+		
+		let aboutParagraphs: string[] = [];
 		const aboutData = aboutFile?.frontmatter || {};
+		
+		if (aboutRawContent && typeof aboutRawContent === 'string') {
+			// Remove frontmatter (everything between --- markers)
+			const contentWithoutFrontmatter = aboutRawContent.replace(/^---[\s\S]*?---\s*\n\n?/, '').trim();
+			// Split by double newlines to get paragraphs
+			aboutParagraphs = contentWithoutFrontmatter
+				.split(/\n\s*\n/)
+				.map((p: string) => p.trim())
+				.filter((p: string) => p.length > 0 && !p.startsWith('#'));
+			console.log('[Content-Simple] About paragraphs from raw:', aboutParagraphs.length);
+		} else if (aboutFile) {
+			console.warn('[Content-Simple] Could not get raw content for about, trying alternative');
+		}
+		
+		console.log('[Content-Simple] About paragraphs:', aboutParagraphs);
 
 		// Load projects
 		const projectFiles = import.meta.glob<{ frontmatter: any }>('../content/projects/*.md', { eager: true });

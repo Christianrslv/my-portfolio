@@ -2,7 +2,7 @@
 name: "Christian Rodrigues"
 role: "Full Stack Developer"
 greeting: "Hi, I'm"
-description: "I create beautiful, functional, and user-centered digital experiences. Passionate about clean code and innovative solutions."
+description: "Prioritizing fundamentals to craft functional, user-centered experiences that last."
 primaryButtonText: "View Work"
 primaryButtonHref: "#projects"
 secondaryButtonText: "Get In Touch"

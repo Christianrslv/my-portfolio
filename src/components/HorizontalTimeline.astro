@@ -745,7 +745,7 @@ const { class: className } = Astro.props;
 		const timelineTrack = document.querySelector('.timeline-track');
 
 		const totalEntries = timelinePoints.length;
-		let currentActiveIndex = 0;
+		let currentActiveIndex = -1;
 
 		// Get the actual positions of timeline points
 		function getPointPositions() {

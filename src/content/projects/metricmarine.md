@@ -1,9 +1,9 @@
 ---
-title: "Multi-region Store"
+title: "Metric Marine"
 description: "International e-commerce platform with multi-currency support, localization, and custom apps."
-technologies: ["Shopify Plus", "React", "Node.js"]
+technologies: ["Shopify", "React", "Node.js"]
 category: "work"
-projectUrl: "#"
+projectUrl: "https://www.metricmarine.com/"
 codeUrl: "#"
 featured: true
 ---

@@ -31,8 +31,8 @@ export const portfolioConfig = {
 	// About section
 	about: {
 		paragraphs: [
-			"I'm a passionate developer with a love for creating digital experiences that make a difference. With expertise in modern web technologies, I bring ideas to life through clean code and thoughtful design.",
-			"When I'm not coding, you can find me exploring new technologies, contributing to open-source projects, or sharing knowledge with the developer community.",
+			"I'm a developer who loves understanding how things really work under the hood, not just assembling code, but truly grasping what's happening beneath the surface.",
+		  "Curious by nature, I enjoy diving into new technologies, exploring different stacks, and investigating ideas from all angles. When I'm not building or learning, you'll find me tinkering with side projects, or exchanging knowledge with the dev community.",
 		],
 		stats: [
 			{ number: '50+', label: 'Projects' },

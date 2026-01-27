@@ -58,7 +58,14 @@ const config = {
 	hero: content?.hero || portfolioConfig.hero,
 	about: {
 		...portfolioConfig.about,
-		...(content?.about || {}),
+		// Only override paragraphs if content has them (not empty)
+		...(content?.about?.paragraphs && content.about.paragraphs.length > 0
+			? { paragraphs: content.about.paragraphs }
+			: {}),
+		// Always override other about properties if they exist in content
+		...(content?.about?.showImage !== undefined ? { showImage: content.about.showImage } : {}),
+		...(content?.about?.imageUrl ? { imageUrl: content.about.imageUrl } : {}),
+		...(content?.about?.imageAlt ? { imageAlt: content.about.imageAlt } : {}),
 	},
 	skills: content?.skills || portfolioConfig.skills,
 	projects: content?.projects || portfolioConfig.projects,
@@ -69,7 +76,10 @@ const config = {
 console.log('[Index] Final hero name:', config.hero.name);
 console.log('[Index] Final config.hero:', config.hero);
 console.log('[Index] About imageUrl:', config.about.imageUrl);
+console.log('[Index] About paragraphs:', config.about.paragraphs);
+console.log('[Index] About paragraphs length:', config.about.paragraphs?.length || 0);
 console.log('[Index] About showImage:', config.about.showImage);
+console.log('[Index] Content about object:', content?.about);
 ---
 
 <Layout>
@@ -152,7 +162,7 @@ console.log('[Index] About showImage:', config.about.showImage);
 	const BREAKPOINT_MOBILE = 1024;
 	const SECTION_SCROLL_UNITS = 0.80;
 	const TIMELINE_SCROLL_UNITS = 0.75;
-	const SECTION_TOLERANCE = 1.5;
+	const SECTION_TOLERANCE = 0.65;
 	const BACKGROUND_IMAGE_END_SECTION = 2;
 	const ZOOM_START = 1.0;
 	const ZOOM_END = 1.5;
@@ -167,7 +177,7 @@ console.log('[Index] About showImage:', config.about.showImage);
 	const isMobile = () => window.innerWidth <= BREAKPOINT_MOBILE;
 
 	const getDatasetValue = (element, key, defaultValue) => {
-		return parseInt(element.dataset[key] || defaultValue, 10);
+		return parseFloat(element.dataset[key] || defaultValue);
 	};
 
 	const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -302,21 +312,24 @@ console.log('[Index] About showImage:', config.about.showImage);
 		if (timelineIndex >= 0) {
 			const timelineStart = timelineIndex * SECTION_SCROLL_UNITS;
 			const timelineEnd = timelineStart + timelineLength;
+			const transitionWindow = SECTION_SCROLL_UNITS * 0.6;
+			const transitionStart = timelineEnd - transitionWindow;
 
 			if (exactProgress < timelineStart) {
 				mappedProgress = exactProgress / SECTION_SCROLL_UNITS;
 				timelineProgress = 0;
 			} else if (exactProgress >= timelineStart && exactProgress <= timelineEnd) {
 				timelineProgress = (exactProgress - timelineStart) / timelineLength;
-				const transitionStart = timelineEnd - SECTION_SCROLL_UNITS;
 
 				if (exactProgress < transitionStart) {
 					mappedProgress = timelineIndex;
 				} else {
-					const transitionProgress = (exactProgress - transitionStart) / SECTION_SCROLL_UNITS;
+					// During transition - smoothly move to next section
+					const transitionProgress = (exactProgress - transitionStart) / transitionWindow;
 					mappedProgress = timelineIndex + transitionProgress;
 				}
 			} else {
+				// Past timeline end - use original calculation that accounts for extra units
 				mappedProgress = (exactProgress - timelineExtraUnits) / SECTION_SCROLL_UNITS;
 				timelineProgress = 1;
 			}
@@ -650,7 +663,17 @@ console.log('[Index] About showImage:', config.about.showImage);
 	function initScrollExperience() {
 		const scrollRoot = document.querySelector('#scroll-root');
 		const scrollStage = document.querySelector('.scroll-stage');
-		const sections = Array.from(document.querySelectorAll('.scroll-panel'));
+		const sections = Array.from(document.querySelectorAll('.scroll-panel'))
+			.filter(section => {
+				// Filter out the timeline that's not visible for the current viewport
+				if (isMobile()) {
+					// On mobile, exclude desktop timeline
+					return section.id !== 'desktop-timeline';
+				} else {
+					// On desktop, exclude mobile timeline
+					return section.id !== 'mobile-timeline';
+				}
+			});
 
 		if (!scrollRoot || !scrollStage || !sections.length) {
 			return;
