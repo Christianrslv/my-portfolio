@@ -359,14 +359,41 @@ console.log('[Index] Content about object:', content?.about);
 		return currentSection >= 2 ? 1 : 0;
 	}
 
+	// ============================================
+	// EDITORIAL EXIT TRANSITION (Isolated - easy to remove)
+	// Blur + delayed opacity fade (no desaturation)
+	// ============================================
+	function applyEditorialExitEffect(element, exitProgress) {
+		// Blur: 0 → 16px (full range of exit)
+		const blurAmount = exitProgress * 16;
+
+		// Opacity: only fades in last 40% of exit (delayed fade)
+		const opacityStart = 0.6;
+		const opacity = exitProgress < opacityStart
+			? 1
+			: 1 - ((exitProgress - opacityStart) / (1 - opacityStart));
+
+		element.style.filter = `blur(${blurAmount}px)`;
+		element.style.opacity = String(Math.max(0, opacity));
+		element.style.visibility = opacity > 0.01 ? 'visible' : 'hidden';
+	}
+
+	function resetEditorialExitEffect(element) {
+		element.style.filter = 'none';
+	}
+
 	function updateBackgroundImage(backgroundImageLayer, currentSection, sectionProgress, isDesktop) {
 		backgroundImageLayer.style.backgroundPosition = 'right bottom';
 
 		const { zoomProgress, zoomScale } = calculateZoomProgress(currentSection, sectionProgress, isDesktop);
 		const exitProgress = calculateExitProgress(currentSection, sectionProgress);
-		const exitTranslate = exitProgress * EXIT_TRANSLATE_DISTANCE;
 
-		backgroundImageLayer.style.transform = `translateX(${exitTranslate}vw) scale(${zoomScale})`;
+		// Editorial exit: translateX commented out, using blur/desaturation instead
+		// const exitTranslate = exitProgress * EXIT_TRANSLATE_DISTANCE;
+		// backgroundImageLayer.style.transform = `translateX(${exitTranslate}vw) scale(${zoomScale})`;
+
+		// Keep only zoom scale, no lateral movement during exit
+		backgroundImageLayer.style.transform = `scale(${zoomScale})`;
 
 		return { zoomProgress, exitProgress };
 	}
@@ -413,11 +440,14 @@ console.log('[Index] Content about object:', content?.about);
 		// Handle image visibility
 		if (currentSection >= BACKGROUND_IMAGE_END_SECTION) {
 			setElementVisibility(backgroundImageLayer, 0);
+			resetEditorialExitEffect(backgroundImageLayer);
 		} else if (currentSection === 1) {
-			setElementVisibility(backgroundImageLayer, 1 - exitProgress);
+			// Editorial exit: blur + desaturation + delayed fade
+			applyEditorialExitEffect(backgroundImageLayer, exitProgress);
 		} else {
 			backgroundImageLayer.style.opacity = '1';
 			backgroundImageLayer.style.visibility = 'visible';
+			resetEditorialExitEffect(backgroundImageLayer);
 		}
 
 		updateOverlays(overlayFull, overlayGradient, currentSection, zoomProgress, exitProgress);
