@@ -88,8 +88,6 @@ console.log('[Index] Content about object:', content?.about);
 	<ScrollIndicator totalSections={6} />
 
 	<div id="scroll-root" class="relative">
-		<!-- Test animated ball for scroll progress -->
-		<div id="scroll-progress-ball" class="scroll-progress-ball hidden lg:block"></div>
 		<div 
 			id="scroll-stage-bg"
 			class="scroll-stage relative h-screen w-full overflow-hidden"
@@ -382,18 +380,63 @@ console.log('[Index] Content about object:', content?.about);
 		element.style.filter = 'none';
 	}
 
+	// ============================================
+	// OPTION D: "Forward Voyage Through the Horizon"
+	// Continuous scroll-driven camera illusion on background image
+	// ============================================
+	function applyForwardVoyageEffect(element, currentSection, sectionProgress, zoomScale) {
+		// Only active during Hero (0) and About (1) sections
+		if (currentSection >= BACKGROUND_IMAGE_END_SECTION) return null;
+
+		// Calculate total voyage progress (0 at start of Hero, 1 at end of About)
+		const totalVoyageProgress = currentSection === 0
+			? sectionProgress * 0.6  // Hero contributes 60% of voyage
+			: 0.6 + (sectionProgress * 0.4);  // About contributes remaining 40%
+
+		// --- LATERAL DRIFT ---
+		// Drift rightward as we "sail" through the scene
+		const maxDrift = 8; // vw
+		const lateralDrift = totalVoyageProgress * maxDrift;
+
+		// --- FORWARD MOTION (enhanced scale) ---
+		// Add subtle extra scale on top of existing zoom for "moving forward" feel
+		const forwardBoost = 1 + (totalVoyageProgress * 0.15); // up to 15% extra
+		const combinedScale = zoomScale * forwardBoost;
+
+		// --- PARALLAX via background-position ---
+		// Shift background position to create "horizon stable, foreground moves" illusion
+		// As we progress, reveal more of the right side of the image
+		const bgPositionX = 100 - (totalVoyageProgress * 15); // 100% → 85%
+		element.style.backgroundPosition = `${bgPositionX}% bottom`;
+
+		// --- WIND DOWN during About section ---
+		// Gradually reduce effect intensity as exit approaches
+		let windDownMultiplier = 1;
+		if (currentSection === 1) {
+			// Ease out the voyage as we approach exit
+			windDownMultiplier = 1 - (sectionProgress * 0.7);
+		}
+
+		// Apply combined transform
+		const finalDrift = lateralDrift * windDownMultiplier;
+		element.style.transform = `translateX(${finalDrift}vw) scale(${combinedScale})`;
+
+		return { totalVoyageProgress, windDownMultiplier };
+	}
+
 	function updateBackgroundImage(backgroundImageLayer, currentSection, sectionProgress, isDesktop) {
 		backgroundImageLayer.style.backgroundPosition = 'right bottom';
 
 		const { zoomProgress, zoomScale } = calculateZoomProgress(currentSection, sectionProgress, isDesktop);
 		const exitProgress = calculateExitProgress(currentSection, sectionProgress);
 
-		// Editorial exit: translateX commented out, using blur/desaturation instead
-		// const exitTranslate = exitProgress * EXIT_TRANSLATE_DISTANCE;
-		// backgroundImageLayer.style.transform = `translateX(${exitTranslate}vw) scale(${zoomScale})`;
-
-		// Keep only zoom scale, no lateral movement during exit
-		backgroundImageLayer.style.transform = `scale(${zoomScale})`;
+		// Forward Voyage effect: continuous camera motion during Hero + About
+		if (currentSection < BACKGROUND_IMAGE_END_SECTION) {
+			applyForwardVoyageEffect(backgroundImageLayer, currentSection, sectionProgress, zoomScale);
+		} else {
+			// Section 2+: reset to default scale
+			backgroundImageLayer.style.transform = `scale(${zoomScale})`;
+		}
 
 		return { zoomProgress, exitProgress };
 	}
@@ -453,25 +496,6 @@ console.log('[Index] Content about object:', content?.about);
 		updateOverlays(overlayFull, overlayGradient, currentSection, zoomProgress, exitProgress);
 	}
 
-	// ============================================
-	// PROGRESS BALL ANIMATION
-	// ============================================
-	function updateProgressBall(scrollProgress) {
-		const progressBall = document.getElementById('scroll-progress-ball');
-		if (!progressBall) return;
-
-		const maxX = window.innerWidth - 60;
-		const xPosition = scrollProgress * maxX;
-		const yPosition = 50 + Math.sin(scrollProgress * Math.PI * 4) * 30;
-
-		gsap.to(progressBall, {
-			x: xPosition,
-			y: yPosition,
-			duration: 0.1,
-			ease: 'none',
-			overwrite: true,
-		});
-	}
 
 	// ============================================
 	// NAVIGATION
@@ -533,11 +557,6 @@ console.log('[Index] Content about object:', content?.about);
 		const total = sections.length;
 		let activeIndex = 0;
 
-		const progressBall = document.getElementById('scroll-progress-ball');
-		if (progressBall) {
-			gsap.set(progressBall, { x: 0, y: 50 });
-		}
-
 		ScrollTrigger.create({
 			trigger: scrollRoot,
 			start: 'top top',
@@ -569,9 +588,6 @@ console.log('[Index] Content about object:', content?.about);
 				// Update section visibility
 				const targetIndex = calculateTargetSection(clampedMappedProgress, total);
 				activeIndex = updateSectionVisibility(sections, targetIndex, activeIndex);
-
-				// Update progress ball
-				updateProgressBall(self.progress);
 
 				// Dispatch timeline progress event
 				const timelineIndex = sections.findIndex(s => s.id === 'desktop-timeline');
@@ -1341,23 +1357,4 @@ console.log('[Index] Content about object:', content?.about);
 		}
 	}
 
-	/* Test animated ball for scroll progress */
-	.scroll-progress-ball {
-		position: fixed;
-		top: 50px;
-		left: 0;
-		width: 60px;
-		height: 60px;
-		border-radius: 50%;
-		background: var(--accent-primary);
-		box-shadow: 0 0 20px rgba(100, 116, 139, 0.3);
-		z-index: 9999;
-		pointer-events: none;
-		transform: translate(0, 0);
-		opacity: 0.8;
-	}
-
-	html.dark .scroll-progress-ball {
-		box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
-	}
 </style>
