@@ -5,5 +5,5 @@ technologies: ["Shopify", "Tailwind", "Liquid"]
 category: "work"
 projectUrl: "https://www.petstore.direct/"
 codeUrl: "#"
-featured: true
+featured: false
 ---

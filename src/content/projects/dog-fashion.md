@@ -5,5 +5,5 @@ technologies: ["Shopify Plus", "React", "Node.js"]
 category: "work"
 projectUrl: "https://www.dogfashion.us/"
 codeUrl: "#"
-featured: true
+featured: false
 ---

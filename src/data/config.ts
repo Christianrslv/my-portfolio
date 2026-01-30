@@ -35,9 +35,8 @@ export const portfolioConfig = {
 		  "Curious by nature, I enjoy diving into new technologies, exploring different stacks, and investigating ideas from all angles. When I'm not building or learning, you'll find me tinkering with side projects, or exchanging knowledge with the dev community.",
 		],
 		stats: [
-			{ number: '50+', label: 'Projects' },
-			{ number: '5+', label: 'Years Experience' },
-			{ number: '100+', label: 'Happy Clients' },
+			{ number: '20+', label: 'Projects' },
+			{ number: '5+', label: 'Years Experience' }
 		],
 		showImage: true,
 	},
@@ -92,23 +91,18 @@ export const portfolioConfig = {
 	contact: {
 		description:
 			"I'm always open to discussing new projects, creative ideas, or opportunities to be part of your visions. Feel free to reach out!",
-		email: 'your.email@example.com',
+		email: 'christianrslv22@gmail.com',
 		socialLinks: [
 			{
 				name: 'GitHub',
-				url: '#',
+				url: 'https://github.com/Christianrslv',
 				icon: 'github',
 			},
 			{
 				name: 'LinkedIn',
-				url: '#',
+				url: 'https://www.linkedin.com/in/christianrslv/',
 				icon: 'linkedin',
-			},
-			{
-				name: 'Twitter',
-				url: '#',
-				icon: 'twitter',
-			},
+			}
 		],
 	},
 

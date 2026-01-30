@@ -417,9 +417,10 @@ console.log('[Index] Content about object:', content?.about);
 			windDownMultiplier = 1 - (sectionProgress * 0.7);
 		}
 
-		// Apply combined transform
+		// Apply combined transform with small delay after scroll stops
 		const finalDrift = lateralDrift * windDownMultiplier;
 		element.style.transform = `translateX(${finalDrift}vw) scale(${combinedScale})`;
+		element.style.transition = 'transform 0.2s linear';
 
 		return { totalVoyageProgress, windDownMultiplier };
 	}

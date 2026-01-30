@@ -5,5 +5,5 @@ technologies: ["Shopify", "React", "Node.js"]
 category: "work"
 projectUrl: "https://incredpets.com/"
 codeUrl: "#"
-featured: true
+featured: false
 ---

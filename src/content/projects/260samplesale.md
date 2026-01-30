@@ -5,5 +5,5 @@ technologies: ["Shopify", "Tailwind", "JavaScript", "Graphql"]
 category: "work"
 projectUrl: "https://260samplesale.com/"
 codeUrl: "#"
-featured: true
+featured: false
 ---

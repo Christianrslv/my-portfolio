@@ -5,5 +5,5 @@ technologies: ["Shopify", "Liquid", "JavaScript", "Graphql"]
 category: "work"
 projectUrl: "https://www.dxv.com/"
 codeUrl: "#"
-featured: true
+featured: false
 ---

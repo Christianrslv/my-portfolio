@@ -5,5 +5,5 @@ technologies: ["Shopify", "Liquid", "JavaScript"]
 category: "work"
 projectUrl: "https://www.providentjewelry.com/"
 codeUrl: "#"
-featured: true
+featured: false
 ---

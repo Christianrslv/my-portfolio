@@ -5,5 +5,5 @@ technologies: ["Shopify", "Liquid", "JavaScript"]
 category: "work"
 projectUrl: "https://www.grohe.us/"
 codeUrl: "#"
-featured: true
+featured: false
 ---

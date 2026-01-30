@@ -5,5 +5,5 @@ technologies: ["Shopify", "Tailwind", "JavaScript", "Graphql"]
 category: "work"
 projectUrl: "https://www.selectseeds.com/"
 codeUrl: "#"
-featured: true
+featured: false
 ---
