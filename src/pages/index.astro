@@ -1,4 +1,5 @@
 ---
+import Analytics from '@vercel/analytics/astro'
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import Hero from '../components/Hero.astro';
@@ -83,6 +84,7 @@ console.log('[Index] Content about object:', content?.about);
 ---
 
 <Layout>
+  <Analytics/>
 	<Navbar logo={config.nav?.logo || portfolioConfig.nav.logo} links={config.nav?.links || portfolioConfig.nav.links} />
 
 	<ScrollIndicator totalSections={6} />
