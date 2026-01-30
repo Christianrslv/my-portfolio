@@ -1,4 +1,28 @@
 ---
+// COMING SOON MODE: Redirect to maintenance page
+// Remove this block and uncomment the imports below to restore the full site
+return Astro.redirect('/coming-soon');
+
+/* ORIGINAL IMPORTS - Uncomment when ready to go live
+import Analytics from '@vercel/analytics/astro'
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Hero from '../components/Hero.astro';
+import About from '../components/About.astro';
+import Skills from '../components/Skills.astro';
+import Projects from '../components/Projects.astro';
+import HorizontalTimeline from '../components/HorizontalTimeline.astro';
+import Contact from '../components/Contact.astro';
+import Footer from '../components/Footer.astro';
+import ScrollIndicator from '../components/ScrollIndicator.astro';
+import MobileTimeline from '../components/MobileTimeline.astro';
+import { portfolioConfig } from '../data/config';
+import { getPortfolioContent } from '../utils/content';
+import { getPortfolioContentSimple } from '../utils/content-simple';
+import { getCollection } from 'astro:content';
+*/
+
+// Temporary placeholder to prevent build errors (these won't be used due to redirect above)
 import Analytics from '@vercel/analytics/astro'
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
