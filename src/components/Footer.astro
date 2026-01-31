@@ -26,4 +26,11 @@ const { text = "Designed & Built with ❤️", year = "2024" } = Astro.props;
 	.footer-year {
 		margin-top: 0.5rem;
 	}
+
+	/* Hide footer on mobile Swiper mode to prevent viewport overflow */
+	@media (max-width: 1024px) {
+		:global(.mobile-swiper-active) .footer {
+			display: none !important;
+		}
+	}
 </style>

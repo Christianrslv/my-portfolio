@@ -19,8 +19,8 @@ const { class: className } = Astro.props;
         <div class="timeline-section-header">
           <div class="header-content flex flex-col gap-2">
             <div class="flex justify-between">
-              <span class="section-year-current font-serif">{formatTimelineDate('2019')}</span>
-              <span class="section-year-next font-serif">{formatTimelineDate('2022')}</span>
+              <span class="section-year-current font-serif">{formatTimelineDate(timelineEntries[0]?.date || '')}</span>
+              <span class="section-year-next font-serif">{formatTimelineDate(timelineEntries[1]?.date || '')}</span>
             </div>
             <div class="flex w-full">
               <div class="section-progress-bar w-full flex gap-2">
@@ -64,20 +64,30 @@ const { class: className } = Astro.props;
 </section>
 
 <style>
-  .journey-timeline-header::before {
+  .journey-timeline-header {
+		/* GPU acceleration to prevent flicker */
+		transform: translateZ(0);
+		-webkit-transform: translateZ(0);
+		backface-visibility: hidden;
+		-webkit-backface-visibility: hidden;
+		will-change: transform;
+		/* Solid background for Swiper compatibility */
+		background: var(--bg-primary);
+	}
+
+	.journey-timeline-header::before {
 		content: '';
 		position: absolute;
 		top: 0;
-    left: 0;
-    right: 0;
-    height: 120%;
-		background: transparent;
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
-		mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
-		-webkit-mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+		left: 0;
+		right: 0;
+		height: 120%;
+		background: var(--bg-primary);
 		z-index: -1;
-    border-radius: 20px 20px 0 0;
+		border-radius: 20px 20px 0 0;
+		/* GPU acceleration */
+		transform: translateZ(0);
+		-webkit-transform: translateZ(0);
 	}
   .timeline-bg {
 		background: rgba(255, 255, 255, 0.25);
@@ -602,73 +612,118 @@ const { class: className } = Astro.props;
 	gsap.registerPlugin(ScrollTrigger);
 	
 	const isMobile = () => window.innerWidth <= 1024;
+	const isInSwiper = () => document.querySelector('#scroll-root.mobile-swiper-active') !== null;
 	
 	// ========================================
-	// MOBILE TIMELINE: Per-section ScrollTriggers
+	// MOBILE TIMELINE: Swiper-compatible version
 	// ========================================
-	function initMobileTimeline() {
-		if (!isMobile()) {
-			console.log('[Timeline] Desktop mode - skipping mobile timeline');
-			return;
-		}
+	let scrollCleanup = null;
+	
+	function initMobileTimelineSwiper() {
+		console.log('[Timeline] Swiper mode - using internal scroll detection');
 		
-		console.log('[Timeline] Mobile mode - initializing vertical sections');
-		
+		const timelineSlide = document.getElementById('mobile-timeline');
 		const sections = document.querySelectorAll('.timeline-section');
-		const triggers = []; // Store triggers for cleanup
-    const progressFill = document.querySelector('.section-progress-fill');
+		const progressFill = document.querySelector('.section-progress-fill');
 		const sectionYearCurrent = document.querySelector('.section-year-current');
 		const sectionYearNext = document.querySelector('.section-year-next');
-    
+		
+		if (!timelineSlide || !sections.length || !progressFill) {
+			console.warn('[Timeline] Required elements not found');
+			return null;
+		}
+
+		function updateProgressFromScroll() {
+			const scrollTop = timelineSlide.scrollTop;
+			const scrollHeight = timelineSlide.scrollHeight - timelineSlide.clientHeight;
+			
+			if (scrollHeight <= 0) return;
+			
+			// Calculate overall progress (0 to 1)
+			const overallProgress = scrollTop / scrollHeight;
+			
+			// Divide the scroll into equal sections
+			const numSections = sections.length;
+			const sectionSize = 1 / numSections;
+			
+			// Determine which section we're in based on overall progress
+			let currentSectionIndex = Math.floor(overallProgress / sectionSize);
+			currentSectionIndex = Math.min(currentSectionIndex, numSections - 1); // Cap at last section
+			currentSectionIndex = Math.max(currentSectionIndex, 0); // Floor at first section
+			
+			// Calculate progress within this section (0-100%)
+			const sectionStartProgress = currentSectionIndex * sectionSize;
+			const progressInSection = (overallProgress - sectionStartProgress) / sectionSize;
+			const sectionProgress = Math.min(100, Math.max(0, progressInSection * 100));
+			
+			// Update progress bar
+			progressFill.style.width = `${sectionProgress}%`;
+			
+			// Update year display
+			const currentSection = sections[currentSectionIndex];
+			if (currentSection && sectionYearCurrent && sectionYearNext) {
+				const year = currentSection.dataset.year;
+				const nextYear = currentSection.dataset.nextYear;
+				
+					if (sectionYearCurrent.textContent !== year) {
+					sectionYearCurrent.textContent = year;
+					sectionYearNext.textContent = nextYear || '';
+				}
+			}
+		}
+		
+		// Attach scroll listener to the timeline slide
+		timelineSlide.addEventListener('scroll', updateProgressFromScroll, { passive: true });
+		updateProgressFromScroll(); // Initial update
+		
+		// Return cleanup function
+		return () => {
+			timelineSlide.removeEventListener('scroll', updateProgressFromScroll);
+		};
+	}
+	
+	// ========================================
+	// MOBILE TIMELINE: Traditional ScrollTrigger version
+	// ========================================
+	function initMobileTimelineScrollTrigger() {
+		console.log('[Timeline] Traditional mode - using GSAP ScrollTrigger');
+		
+		const sections = document.querySelectorAll('.timeline-section');
+		const triggers = [];
+		const progressFill = document.querySelector('.section-progress-fill');
+		const sectionYearCurrent = document.querySelector('.section-year-current');
+		const sectionYearNext = document.querySelector('.section-year-next');
 
 		sections.forEach((section, index) => {
 			let year = section.dataset.year;
 			let nextYear = section.dataset.nextYear;
-			console.log(`[Timeline] Year: ${year}`);
+			
 			if (!progressFill) {
 				console.warn(`[Timeline] No progress fill found for section ${index}`);
 				return;
 			}
-			// console.log(`[Timeline] Creating ScrollTrigger for section ${index} (${year})`);	
-			// Create ScrollTrigger for this section
+			
 			const trigger = ScrollTrigger.create({
 				trigger: section,
-				start: 'top 50%', // When section header reaches sticky position
-				end: 'bottom 50%', // When section bottom passes sticky position
-				scrub: 0.3, // Smooth animation with slight delay
+				start: 'top 50%',
+				end: 'bottom 50%',
+				scrub: 0.3,
 				onUpdate: (self) => {
-					// Animate progress line 0% → 100% as user scrolls through section
 					const progress = self.progress * 100;
 					progressFill.style.width = `${progress}%`;
-					
-					// Debug log (can be removed in production)
-					// if (Math.abs(progress - 0) < 1 || Math.abs(progress - 100) < 1 || progress % 25 < 1) {
-					// 	console.log(`[Timeline] Section ${index} (${year}): ${progress.toFixed(1)}%`);
-					// }
 
-          // Update year display when entering a new section
-          if (sectionYearCurrent && sectionYearCurrent.textContent !== year) {
-            sectionYearCurrent.textContent = year;
-            sectionYearNext.textContent = nextYear;
-            // console.log(`[Timeline] Updated year display to: ${year}`);
-          }
-
+					if (sectionYearCurrent && sectionYearCurrent.textContent !== year) {
+						sectionYearCurrent.textContent = year;
+						sectionYearNext.textContent = nextYear;
+					}
 				},
-				onEnter: () => {
-					// console.log(`[Timeline] Entered section ${index} (${year})`);
-				},
-				onLeave: () => {
-					// console.log(`[Timeline] Left section ${index} (${year})`);
-				},
-				markers: false // Set to true for debugging
+				markers: false
 			});
 			
 			triggers.push(trigger);
 		});
 		
-		console.log(`[Timeline] Created ${triggers.length} mobile ScrollTriggers`);
-		
-		// Store triggers for cleanup
+		console.log(`[Timeline] Created ${triggers.length} ScrollTriggers`);
 		return triggers;
 	}
 	
@@ -678,19 +733,31 @@ const { class: className } = Astro.props;
 	let mobileScrollTriggers = [];
 	
 	function initTimeline() {
-		// Clean up any existing triggers
+		// Clean up any existing triggers/listeners
 		if (mobileScrollTriggers.length > 0) {
 			console.log('[Timeline] Cleaning up existing ScrollTriggers');
 			mobileScrollTriggers.forEach(trigger => trigger.kill());
 			mobileScrollTriggers = [];
 		}
 		
-		// Initialize based on viewport
+		if (scrollCleanup) {
+			scrollCleanup();
+			scrollCleanup = null;
+		}
+		
+		// Initialize based on viewport and Swiper status
 		if (isMobile()) {
-			const triggers = initMobileTimeline();
-			if (triggers) {
-				mobileScrollTriggers = triggers;
-			}
+			// Wait a bit for Swiper to initialize
+			setTimeout(() => {
+				if (isInSwiper()) {
+					scrollCleanup = initMobileTimelineSwiper();
+				} else {
+					const triggers = initMobileTimelineScrollTrigger();
+					if (triggers) {
+						mobileScrollTriggers = triggers;
+					}
+				}
+			}, 100);
 		}
 	}
 	
@@ -706,7 +773,6 @@ const { class: className } = Astro.props;
 	let resizeTimeout;
 	
 	window.addEventListener('resize', () => {
-		// Debounce resize events
 		clearTimeout(resizeTimeout);
 		resizeTimeout = setTimeout(() => {
 			const newMode = isMobile() ? 'mobile' : 'desktop';
@@ -714,10 +780,27 @@ const { class: className } = Astro.props;
 			if (newMode !== currentMode) {
 				console.log(`[Timeline] Mode switch detected: ${currentMode} → ${newMode}`);
 				currentMode = newMode;
-				
-				// Reinitialize for new mode
 				initTimeline();
 			}
-		}, 250); // 250ms debounce
+		}, 250);
 	});
+	
+	// Re-initialize when Swiper mode changes
+	const observer = new MutationObserver((mutations) => {
+		mutations.forEach((mutation) => {
+			if (mutation.attributeName === 'class') {
+				const scrollRoot = document.getElementById('scroll-root');
+				if (scrollRoot) {
+					const hasSwiperClass = scrollRoot.classList.contains('mobile-swiper-active');
+					console.log('[Timeline] Swiper class changed, reinitializing...');
+					initTimeline();
+				}
+			}
+		});
+	});
+	
+	const scrollRoot = document.getElementById('scroll-root');
+	if (scrollRoot) {
+		observer.observe(scrollRoot, { attributes: true });
+	}
 </script>

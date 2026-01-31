@@ -173,6 +173,10 @@ console.log('[Index] Content about object:', content?.about);
 	// @ts-nocheck
 	import gsap from 'gsap';
 	import ScrollTrigger from 'gsap/ScrollTrigger';
+	import Swiper from 'swiper';
+	import { EffectCreative, Mousewheel, HashNavigation } from 'swiper/modules';
+	import 'swiper/css';
+	import 'swiper/css/effect-creative';
 
 	gsap.registerPlugin(ScrollTrigger);
 
@@ -642,63 +646,605 @@ console.log('[Index] Content about object:', content?.about);
 	}
 
 	// ============================================
-	// MOBILE SCROLL EXPERIENCE
+	// MOBILE SWIPER EXPERIENCE
 	// ============================================
-	function resetMobileStyles(sections, scrollRoot) {
-		console.log('[GSAP] Mobile detected - using CSS card stacking');
+	
+	// Get scroll mode from URL param (A, B, or C) - default to B (edge-release)
+	function getMobileScrollMode() {
+		const urlParams = new URLSearchParams(window.location.search);
+		const mode = urlParams.get('scrollMode')?.toUpperCase();
+		if (mode === 'A' || mode === 'B' || mode === 'C') {
+			return mode;
+		}
+		return 'B'; // Default: edge-release
+	}
 
+	// Store Swiper instance globally for cleanup
+	let mobileSwiper = null;
+	let mobileScrollMode = getMobileScrollMode();
+
+	function initMobileSwiperExperience(sections, scrollRoot) {
+		console.log(`[Swiper] Mobile detected - initializing Swiper (mode: ${mobileScrollMode})`);
+
+		// Set dynamic viewport height (accounts for mobile browser bar)
+		function setViewportHeight() {
+			const vh = window.innerHeight * 0.01;
+			const innerH = window.innerHeight;
+			const visualH = window.visualViewport ? window.visualViewport.height : null;
+			document.documentElement.style.setProperty('--vh', `${vh}px`);
+			
+			// Update heights on all relevant containers
+			const heightValue = `${innerH}px`;
+			if (scrollRoot) {
+				scrollRoot.style.height = heightValue;
+				scrollRoot.style.maxHeight = heightValue;
+			}
+			const mainContent = document.querySelector('.main-content, #main-content');
+			if (mainContent) {
+				mainContent.style.height = heightValue;
+				mainContent.style.maxHeight = heightValue;
+			}
+			const scrollStage = document.querySelector('.scroll-stage');
+			if (scrollStage) {
+				scrollStage.style.height = heightValue;
+				scrollStage.style.maxHeight = heightValue;
+			}
+			const swiperWrapper = document.querySelector('.swiper-wrapper');
+			if (swiperWrapper) {
+				swiperWrapper.style.height = heightValue;
+				swiperWrapper.style.maxHeight = heightValue;
+			}
+			// Also set on all slides
+			const slides = document.querySelectorAll('.swiper-slide');
+			slides.forEach(slide => {
+				slide.style.height = heightValue;
+				slide.style.maxHeight = heightValue;
+			});
+			
+		}
+		setViewportHeight();
+		window.addEventListener('resize', setViewportHeight);
+		window.addEventListener('orientationchange', setViewportHeight);
+		// Use visualViewport API for better mobile browser bar detection
+		if (window.visualViewport) {
+			window.visualViewport.addEventListener('resize', setViewportHeight);
+		}
+
+		// Clean up any existing Swiper instance
+		if (mobileSwiper) {
+			mobileSwiper.destroy(true, true);
+			mobileSwiper = null;
+		}
+
+		// Clear any GSAP styles on sections
 		sections.forEach(section => {
 			gsap.set(section, { clearProps: 'all' });
 		});
 
+		const scrollStage = document.querySelector('.scroll-stage');
+		if (!scrollStage) return;
+
+		// Add classes to html and body to prevent pull-to-refresh
+		document.documentElement.classList.add('mobile-swiper-active-html');
+		document.body.classList.add('mobile-swiper-active-body');
+
+		// Set up the DOM structure for Swiper - use actual innerHeight for accuracy
+		scrollRoot.style.height = `${window.innerHeight}px`;
+		scrollRoot.classList.add('mobile-swiper-active');
+
+		// Add swiper classes to existing structure
+		scrollStage.classList.add('swiper');
+		
+		// Create wrapper div for slides
+		const existingWrapper = scrollStage.querySelector('.swiper-wrapper');
+		if (!existingWrapper) {
+			const wrapper = document.createElement('div');
+			wrapper.className = 'swiper-wrapper';
+			
+			// Move all scroll-panel sections into wrapper, EXCLUDING desktop-timeline on mobile
+			const panels = scrollStage.querySelectorAll('.scroll-panel');
+			panels.forEach(panel => {
+				// Skip desktop-timeline on mobile - it should not be a Swiper slide
+				if (panel.id === 'desktop-timeline') {
+					panel.style.display = 'none';
+					return;
+				}
+				panel.classList.add('swiper-slide');
+				wrapper.appendChild(panel);
+			});
+			
+			scrollStage.appendChild(wrapper);
+		}
+		
+
+		// Mark slides with scrollable content
+		const slidesWithScroll = ['skills', 'projects', 'mobile-timeline'];
+		slidesWithScroll.forEach(id => {
+			const slide = document.getElementById(id);
+			if (slide) {
+				slide.dataset.hasScroll = 'true';
+			}
+		});
+
+		// Configure Swiper based on scroll mode
+		const swiperConfig = getSwiperConfig();
+		
+		// Initialize Swiper
+		mobileSwiper = new Swiper('.scroll-stage.swiper', swiperConfig);
+
+		// Force overflow-y on scrollable slides via JavaScript (CSS !important isn't working)
+		const scrollableSlideIds = ['skills', 'projects', 'mobile-timeline'];
+		scrollableSlideIds.forEach(id => {
+			const slide = document.getElementById(id);
+			if (slide) {
+				slide.style.overflowY = 'auto';
+				slide.style.webkitOverflowScrolling = 'touch';
+				slide.style.overscrollBehavior = 'contain';
+				// Mark as having potential scroll content
+				slide.dataset.hasScroll = 'true';
+			}
+		});
+
+		// Set background image CSS variable for Hero and About slides
+		const bgImageLayer = scrollStage.querySelector('.background-image-layer');
+		if (bgImageLayer) {
+			const bgImage = bgImageLayer.style.backgroundImage || getComputedStyle(bgImageLayer).backgroundImage;
+			document.documentElement.style.setProperty('--mobile-bg-image', bgImage);
+		}
+
+		// Hide the separate background layers on mobile (we're using slide backgrounds instead)
+		const bgLayers = scrollStage.querySelectorAll('.base-background, .background-image-layer, .overlay-full, .overlay-gradient');
+		bgLayers.forEach(layer => {
+			layer.style.display = 'none';
+		});
+
+
+		// Set up background fade handler
+		initMobileSwiperBackgroundFade(mobileSwiper);
+
+		// Set up navigation integration
+		initMobileSwiperNavigation(mobileSwiper, sections);
+
+		// Set up nested scroll handling for slides with overflow
+		initNestedScrollHandling(mobileSwiper, sections);
+
+		console.log('[Swiper] Mobile Swiper initialized successfully');
+	}
+
+	function getSwiperConfig() {
+		const baseConfig = {
+			modules: [EffectCreative, Mousewheel, HashNavigation],
+			direction: 'vertical',
+			slidesPerView: 1,
+			speed: 350,
+			effect: 'creative',
+			creativeEffect: {
+				// Card reveal effect - simple 2D (no 3D transforms that break stacking)
+				prev: {
+					translate: [0, '-5%', 0],  // No Z translation - avoids 3D stacking issues
+					opacity: 0.9,
+					scale: 0.98,
+				},
+				next: {
+					translate: [0, '100%', 0],
+					opacity: 1,
+					shadow: false,
+				},
+				// Use 2D transforms only
+				limitProgress: 2,
+			},
+			hashNavigation: {
+				watchState: true,
+			},
+			grabCursor: false,
+			preventInteractionOnTransition: true,
+			resistance: true,
+			resistanceRatio: 0.65,
+			watchSlidesProgress: true,
+			observer: true,
+			observeParents: true,
+			// Improve touch handling
+			touchStartPreventDefault: false,
+			touchMoveStopPropagation: false,
+			passiveListeners: true,
+			// Prevent unwanted behaviors
+			simulateTouch: true,
+			allowTouchMove: true,
+			followFinger: true,
+			on: {
+				slideChange: function() {
+					const index = this.activeIndex;
+					console.log(`[Swiper] Slide changed to: ${index}`);
+					
+					// Dispatch section change event for navbar
+					window.dispatchEvent(new CustomEvent('sectionchange', {
+						detail: { index }
+					}));
+
+					// Reset scroll position of slides with scrollable content
+					const currentSlide = this.slides[index];
+					if (currentSlide && currentSlide.dataset.hasScroll === 'true') {
+						currentSlide.scrollTop = 0;
+					}
+				},
+				init: function() {
+					// Dispatch initial section
+					window.dispatchEvent(new CustomEvent('sectionchange', {
+						detail: { index: 0 }
+					}));
+				},
+				touchStart: function(swiper, event) {
+					// Store touch start position for nested scroll detection
+					swiper.touchStartY = event.touches ? event.touches[0].clientY : event.clientY;
+				},
+				touchEnd: function(swiper, event) {
+					// Touch end handler
+				}
+			}
+		};
+
+		// Apply scroll mode specific settings
+		switch (mobileScrollMode) {
+			case 'A': // Scroll-then-swipe - must scroll all content before changing slide
+				return {
+					...baseConfig,
+					mousewheel: {
+						enabled: false, // Disable mousewheel in favor of touch
+					},
+					touchReleaseOnEdges: false,
+					threshold: 20,
+					touchAngle: 45,
+					longSwipesRatio: 0.5,
+					longSwipesMs: 300,
+				};
+			
+			case 'B': // Edge-release (default) - scroll content, release at edges
+				return {
+					...baseConfig,
+					mousewheel: {
+						enabled: false,
+					},
+					touchReleaseOnEdges: true,
+					threshold: 15,
+					touchAngle: 45,
+					longSwipesRatio: 0.4,
+					longSwipesMs: 250,
+				};
+			
+			case 'C': // Gesture differentiation - fast swipe = slide change
+				return {
+					...baseConfig,
+					mousewheel: {
+						enabled: false,
+					},
+					touchReleaseOnEdges: true,
+					threshold: 10,
+					touchAngle: 30,
+					longSwipesRatio: 0.25,
+					longSwipesMs: 150,
+					shortSwipes: true,
+				};
+			
+			default:
+				return baseConfig;
+		}
+	}
+
+	function initMobileSwiperBackgroundFade(swiper) {
+		const backgroundImageLayer = document.querySelector('.background-image-layer');
+		const overlayFull = document.querySelector('.overlay-full');
+		const overlayGradient = document.querySelector('.overlay-gradient');
+
+		if (!backgroundImageLayer) return;
+
+		function updateBackgroundForSlide(index, progress = 0) {
+			// Sections 0-1 (Hero, About): Show background
+			// Section 2+ (Skills onward): Hide background
+			
+			if (index === 0) {
+				// Hero: Full overlay visible
+				setElementVisibility(backgroundImageLayer, 1);
+				setElementVisibility(overlayFull, 1);
+				setElementVisibility(overlayGradient, 0);
+			} else if (index === 1) {
+				// About: Gradient overlay, start fading based on progress
+				setElementVisibility(backgroundImageLayer, 1);
+				setElementVisibility(overlayFull, 0);
+				setElementVisibility(overlayGradient, 1);
+			} else {
+				// Skills and beyond: Hide background
+				setElementVisibility(backgroundImageLayer, 0);
+				setElementVisibility(overlayFull, 0);
+				setElementVisibility(overlayGradient, 0);
+			}
+		}
+
+		// Handle slide transitions with smooth fade
+		swiper.on('slideChange', function() {
+			updateBackgroundForSlide(this.activeIndex);
+		});
+
+		// Handle progress during transition for smooth fade
+		swiper.on('progress', function(progress) {
+			const activeIndex = this.activeIndex;
+			
+			// When transitioning from About (1) to Skills (2), fade out background
+			if (activeIndex === 1 && this.progress > 0) {
+				const slideProgress = (this.progress - (1 / (this.slides.length - 1))) * (this.slides.length - 1);
+				if (slideProgress > 0 && slideProgress < 1) {
+					const fadeProgress = slideProgress;
+					setElementVisibility(backgroundImageLayer, 1 - fadeProgress);
+					setElementVisibility(overlayGradient, 1 - fadeProgress);
+				}
+			}
+		});
+
+		// Initial state
+		updateBackgroundForSlide(0);
+	}
+
+	function initMobileSwiperNavigation(swiper, sections) {
+		// Handle nav link clicks
+		document.querySelectorAll('a[href^="#"]').forEach(link => {
+			link.addEventListener('click', (e) => {
+				if (!isMobile() || !mobileSwiper) return;
+				
+				e.preventDefault();
+				const href = link.getAttribute('href') || '';
+				const targetId = href.replace('#', '');
+				
+				// Find section index
+				const sectionIds = ['home', 'about', 'skills', 'projects', 'mobile-timeline', 'contact'];
+				let targetIndex = sectionIds.indexOf(targetId);
+				
+				// Handle timeline alias
+				if (targetId === 'timeline') {
+					targetIndex = sectionIds.indexOf('mobile-timeline');
+				}
+				
+				if (targetIndex !== -1) {
+					swiper.slideTo(targetIndex);
+					
+					// Close mobile menu if open (Alpine.js)
+					const mobileMenuContainer = document.getElementById('mobile-menu-container');
+					if (mobileMenuContainer && mobileMenuContainer.__x) {
+						mobileMenuContainer.__x.$data.open = false;
+					}
+				}
+			});
+		});
+
+		// Handle gotosection custom event
+		window.addEventListener('gotosection', (e) => {
+			if (!isMobile() || !mobileSwiper) return;
+			
+			const index = e.detail?.index;
+			if (typeof index === 'number') {
+				swiper.slideTo(index);
+			}
+		});
+	}
+
+	function initNestedScrollHandling(swiper, sections) {
+		// For slides with overflowing content, we need special handling
+		// The slide itself is the scroll container (it has overflow-y: auto)
+		const slidesWithScroll = ['skills', 'projects', 'mobile-timeline'];
+		
+		slidesWithScroll.forEach(slideId => {
+			const slide = document.getElementById(slideId);
+			if (!slide) return;
+
+			// The slide itself is the scrollable container
+			const scrollContainer = slide;
+			
+			console.log(`[Swiper] Setting up nested scroll for: ${slideId}`);
+			
+			// Handle scroll mode specific behavior
+			if (mobileScrollMode === 'A') {
+				initScrollThenSwipe(swiper, slide, scrollContainer);
+			} else if (mobileScrollMode === 'B') {
+				initEdgeRelease(swiper, slide, scrollContainer);
+			} else if (mobileScrollMode === 'C') {
+				initGestureDifferentiation(swiper, slide, scrollContainer);
+			}
+		});
+	}
+
+	function initScrollThenSwipe(swiper, slide, scrollContainer) {
+		// Mode A: User must scroll through ALL content before slide changes
+		let touchStartY = 0;
+		let touchDirection = 0; // -1 = up, 1 = down
+
+		function getScrollState() {
+			const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+			const isAtTop = scrollTop <= 2;
+			const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
+			const hasScrollableContent = scrollHeight > clientHeight + 10;
+			return { isAtTop, isAtBottom, hasScrollableContent };
+		}
+
+		slide.addEventListener('touchstart', (e) => {
+			touchStartY = e.touches[0].clientY;
+			const { isAtTop, isAtBottom, hasScrollableContent } = getScrollState();
+			
+			// If no scrollable content, always allow swiper
+			if (!hasScrollableContent) {
+				swiper.allowTouchMove = true;
+				return;
+			}
+			
+			// Start with swiper disabled for scrollable slides
+			swiper.allowTouchMove = false;
+		}, { passive: true });
+
+		slide.addEventListener('touchmove', (e) => {
+			const touchY = e.touches[0].clientY;
+			const deltaY = touchStartY - touchY;
+			touchDirection = deltaY > 0 ? 1 : -1; // 1 = scrolling down, -1 = scrolling up
+			
+			const { isAtTop, isAtBottom, hasScrollableContent } = getScrollState();
+			
+			if (!hasScrollableContent) {
+				swiper.allowTouchMove = true;
+				return;
+			}
+			
+			// Only allow swiper at the correct edge based on direction
+			if (touchDirection > 0 && isAtBottom) {
+				swiper.allowTouchMove = true;
+			} else if (touchDirection < 0 && isAtTop) {
+				swiper.allowTouchMove = true;
+			} else {
+				swiper.allowTouchMove = false;
+			}
+		}, { passive: true });
+
+		slide.addEventListener('touchend', () => {
+			// Always re-enable after touch ends for other slides
+			setTimeout(() => {
+				swiper.allowTouchMove = true;
+			}, 100);
+		}, { passive: true });
+	}
+
+	function initEdgeRelease(swiper, slide, scrollContainer) {
+		// Mode B: Scroll content freely, release to swiper at edges
+		let touchStartY = 0;
+		let initialScrollTop = 0;
+		const slideId = slide.id;
+
+		function getScrollState() {
+			const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+			const isAtTop = scrollTop <= 2;
+			const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
+			const hasScrollableContent = scrollHeight > clientHeight + 10;
+			return { isAtTop, isAtBottom, hasScrollableContent, scrollTop, scrollHeight, clientHeight };
+		}
+
+		slide.addEventListener('touchstart', (e) => {
+			touchStartY = e.touches[0].clientY;
+			const state = getScrollState();
+			initialScrollTop = state.scrollTop;
+			
+			// If no scrollable content, always allow swiper
+			if (!state.hasScrollableContent) {
+				swiper.allowTouchMove = true;
+				return;
+			}
+			
+			// If at edge already, allow swiper for the correct direction
+			// But we'll refine this in touchmove
+			swiper.allowTouchMove = false;
+		}, { passive: true });
+
+		slide.addEventListener('touchmove', (e) => {
+			const touchY = e.touches[0].clientY;
+			const deltaY = touchStartY - touchY; // positive = scrolling down
+			
+			const { isAtTop, isAtBottom, hasScrollableContent } = getScrollState();
+			
+			if (!hasScrollableContent) {
+				swiper.allowTouchMove = true;
+				return;
+			}
+			
+			let newAllowTouchMove = swiper.allowTouchMove;
+			// At top and trying to go to previous slide (swipe down / deltaY < 0)
+			if (isAtTop && deltaY < -10) {
+				newAllowTouchMove = true;
+			}
+			// At bottom and trying to go to next slide (swipe up / deltaY > 0)
+			else if (isAtBottom && deltaY > 10) {
+				newAllowTouchMove = true;
+			}
+			else {
+				newAllowTouchMove = false;
+			}
+			
+			swiper.allowTouchMove = newAllowTouchMove;
+		}, { passive: true });
+
+		slide.addEventListener('touchend', () => {
+			setTimeout(() => {
+				swiper.allowTouchMove = true;
+			}, 100);
+		}, { passive: true });
+	}
+
+	function initGestureDifferentiation(swiper, slide, scrollContainer) {
+		// Mode C: Fast swipes change slides regardless of scroll position
+		let touchStartY = 0;
+		let touchStartTime = 0;
+		const VELOCITY_THRESHOLD = 0.6; // pixels per millisecond
+		const MIN_DISTANCE = 40; // minimum swipe distance
+
+		function getScrollState() {
+			const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+			const isAtTop = scrollTop <= 2;
+			const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
+			const hasScrollableContent = scrollHeight > clientHeight + 10;
+			return { isAtTop, isAtBottom, hasScrollableContent };
+		}
+
+		slide.addEventListener('touchstart', (e) => {
+			touchStartY = e.touches[0].clientY;
+			touchStartTime = Date.now();
+			
+			const { hasScrollableContent } = getScrollState();
+			if (!hasScrollableContent) {
+				swiper.allowTouchMove = true;
+			} else {
+				// Start with disabled, will enable based on velocity
+				swiper.allowTouchMove = false;
+			}
+		}, { passive: true });
+
+		slide.addEventListener('touchmove', (e) => {
+			const touchY = e.touches[0].clientY;
+			const deltaY = touchStartY - touchY;
+			const elapsed = Date.now() - touchStartTime;
+			const velocity = Math.abs(deltaY) / Math.max(elapsed, 1);
+			
+			const { isAtTop, isAtBottom, hasScrollableContent } = getScrollState();
+			
+			if (!hasScrollableContent) {
+				swiper.allowTouchMove = true;
+				return;
+			}
+			
+			// Fast movement = slide change
+			if (velocity >= VELOCITY_THRESHOLD && Math.abs(deltaY) > MIN_DISTANCE) {
+				swiper.allowTouchMove = true;
+			}
+			// At edges, allow slide change
+			else if ((isAtTop && deltaY < -5) || (isAtBottom && deltaY > 5)) {
+				swiper.allowTouchMove = true;
+			}
+			else {
+				swiper.allowTouchMove = false;
+			}
+		}, { passive: true });
+
+		slide.addEventListener('touchend', () => {
+			setTimeout(() => {
+				swiper.allowTouchMove = true;
+			}, 100);
+		}, { passive: true });
+	}
+
+	// Legacy function for non-Swiper mobile (kept for reference but not used)
+	function resetMobileStyles(sections, scrollRoot) {
+		console.log('[GSAP] Mobile detected - legacy CSS mode (deprecated)');
+		sections.forEach(section => {
+			gsap.set(section, { clearProps: 'all' });
+		});
 		scrollRoot.style.height = 'auto';
 	}
 
 	function initMobileBackgroundFade() {
-		if (!isMobile()) return;
-
-		const backgroundImageLayer = document.querySelector('.background-image-layer');
-		const overlayFull = document.querySelector('.overlay-full');
-		const overlayGradient = document.querySelector('.overlay-gradient');
-		const baseBackground = document.querySelector('.base-background');
-		const heroSection = document.getElementById('home');
-		const aboutSection = document.getElementById('about');
-		const skillsSection = document.getElementById('skills');
-
-		if (!heroSection || !aboutSection) return;
-
-		function updateBackgroundOnScroll() {
-			if (!isMobile()) return;
-
-			const scrollY = window.scrollY;
-			const heroHeight = heroSection.offsetHeight;
-			const aboutTop = aboutSection.offsetTop;
-			const aboutHeight = aboutSection.offsetHeight;
-			const skillsTop = skillsSection?.offsetTop || (aboutTop + aboutHeight);
-
-			// Phase 1: Overlay transition during Hero
-			const overlayTransitionEnd = heroHeight * ZOOM_COMPLETION_POINT;
-			const overlayProgress = clamp(scrollY / overlayTransitionEnd, 0, 1);
-
-			// Phase 2: Background fade when entering Skills
-			const fadeStart = aboutTop + (aboutHeight * 0.5);
-			const fadeEnd = skillsTop + (window.innerHeight * 0.3);
-			const fadeProgress = scrollY > fadeStart
-				? Math.min(1, (scrollY - fadeStart) / (fadeEnd - fadeStart))
-				: 0;
-
-			// Apply overlay transitions
-			setElementVisibility(overlayFull, (1 - overlayProgress) * (1 - fadeProgress));
-			setElementVisibility(overlayGradient, overlayProgress * (1 - fadeProgress));
-			setElementVisibility(backgroundImageLayer, 1 - fadeProgress);
-
-			if (baseBackground) {
-				baseBackground.style.opacity = '1';
-			}
-		}
-
-		window.addEventListener('scroll', updateBackgroundOnScroll, { passive: true });
-		updateBackgroundOnScroll();
+		// This is now handled by initMobileSwiperBackgroundFade
+		// Kept for compatibility but does nothing when Swiper is active
+		if (!isMobile() || mobileSwiper) return;
 	}
 
 	// ============================================
@@ -727,6 +1273,26 @@ console.log('[Index] Content about object:', content?.about);
 	}
 
 	// ============================================
+	// VIEWPORT HEIGHT HANDLING
+	// ============================================
+	function initViewportHeight() {
+		// Set --vh CSS variable for consistent viewport height on mobile
+		function setVH() {
+			const vh = window.innerHeight * 0.01;
+			document.documentElement.style.setProperty('--vh', `${vh}px`);
+		}
+
+		setVH();
+		
+		// Update on resize and orientation change
+		window.addEventListener('resize', setVH);
+		window.addEventListener('orientationchange', () => {
+			// Delay to allow browser to settle
+			setTimeout(setVH, 100);
+		});
+	}
+
+	// ============================================
 	// MAIN INITIALIZATION
 	// ============================================
 	function initScrollExperience() {
@@ -749,7 +1315,7 @@ console.log('[Index] Content about object:', content?.about);
 		}
 
 		if (isMobile()) {
-			resetMobileStyles(sections, scrollRoot);
+			initMobileSwiperExperience(sections, scrollRoot);
 			return;
 		}
 
@@ -757,6 +1323,7 @@ console.log('[Index] Content about object:', content?.about);
 	}
 
 	function init() {
+		initViewportHeight();
 		handleTimelineVisibility();
 		initScrollExperience();
 		initMobileBackgroundFade();
@@ -767,11 +1334,59 @@ console.log('[Index] Content about object:', content?.about);
 	// ============================================
 	let currentMode = isMobile() ? 'mobile' : 'desktop';
 
+	function cleanupMobileSwiper() {
+		if (mobileSwiper) {
+			console.log('[Swiper] Cleaning up mobile Swiper');
+			mobileSwiper.destroy(true, true);
+			mobileSwiper = null;
+		}
+
+		// Remove html/body classes
+		document.documentElement.classList.remove('mobile-swiper-active-html');
+		document.body.classList.remove('mobile-swiper-active-body');
+
+		// Remove Swiper classes and restore DOM structure
+		const scrollStage = document.querySelector('.scroll-stage');
+		const scrollRoot = document.querySelector('#scroll-root');
+		
+		if (scrollStage) {
+			scrollStage.classList.remove('swiper');
+			const wrapper = scrollStage.querySelector('.swiper-wrapper');
+			if (wrapper) {
+				// Move slides back to scroll-stage
+				const slides = wrapper.querySelectorAll('.swiper-slide');
+				slides.forEach(slide => {
+					slide.classList.remove('swiper-slide');
+					delete slide.dataset.hasScroll;
+					scrollStage.appendChild(slide);
+				});
+				wrapper.remove();
+			}
+			
+			// Restore background layers visibility
+			const bgLayers = scrollStage.querySelectorAll('.base-background, .background-image-layer, .overlay-full, .overlay-gradient');
+			bgLayers.forEach(layer => {
+				layer.style.display = '';
+			});
+		}
+		
+		if (scrollRoot) {
+			scrollRoot.classList.remove('mobile-swiper-active');
+			scrollRoot.style.height = '';
+		}
+	}
+
 	function handleResize() {
 		const newMode = isMobile() ? 'mobile' : 'desktop';
 
 		if (newMode !== currentMode) {
-			console.log(`[GSAP] Mode changed: ${currentMode} -> ${newMode}`);
+			console.log(`[Mode] Changed: ${currentMode} -> ${newMode}`);
+			
+			// Clean up previous mode
+			if (currentMode === 'mobile') {
+				cleanupMobileSwiper();
+			}
+			
 			currentMode = newMode;
 
 			handleTimelineVisibility();
@@ -1236,147 +1851,403 @@ console.log('[Index] Content about object:', content?.about);
 	}
 
 	/* ============================================
-	   MOBILE CARD STACKING EFFECT (≤1024px)
-	   - Sections 0-1 (Hero, About): Original behavior with background image
-	   - Section 2+ (Skills onward): Card stacking effect
+	   MOBILE SWIPER EXPERIENCE (≤1024px)
+	   TikTok/Reels-style vertical swiping with card-reveal effect
 	   ============================================ */
+	
+	/* Dynamic viewport height CSS variable fallback */
+	:root {
+		--vh: 1vh;
+	}
+	
 	@media (max-width: 1024px) {
-		#scroll-root {
-			height: auto !important;
+		/* Prevent pull-to-refresh on mobile browsers */
+		html.mobile-swiper-active-html,
+		body.mobile-swiper-active-body {
+			overscroll-behavior: none;
+			overscroll-behavior-y: none;
+			-webkit-overflow-scrolling: touch;
+			touch-action: pan-x pan-y;
+			overflow: hidden;
+			position: fixed;
+			width: 100%;
+			height: 100dvh; /* Dynamic viewport height */
+			height: -webkit-fill-available; /* Safari fallback */
+			/* Use JS-calculated height as fallback */
+			height: calc(var(--vh, 1vh) * 100);
 		}
 
-		.scroll-stage {
-			height: auto !important;
-			overflow: visible;
-			position: relative;
-		}
-
-		/* Background layers - FIXED position so they stay visible behind sections 0-1 */
-		.base-background {
+		/* Constrain main-content wrapper from Layout.astro */
+		body.mobile-swiper-active-body .main-content,
+		body.mobile-swiper-active-body #main-content {
+			height: 100dvh;
+			height: -webkit-fill-available;
+			height: calc(var(--vh, 1vh) * 100);
+			max-height: 100dvh;
+			max-height: -webkit-fill-available;
+			overflow: hidden;
 			position: fixed;
 			top: 0;
 			left: 0;
 			right: 0;
 			bottom: 0;
-			z-index: 0;
 		}
 
-		.background-image-layer {
+		/* When Swiper is active */
+		#scroll-root.mobile-swiper-active {
+			height: 100dvh;
+			height: -webkit-fill-available;
+			height: calc(var(--vh, 1vh) * 100);
+			max-height: 100dvh;
+			max-height: -webkit-fill-available;
+			overflow: hidden;
 			position: fixed;
 			top: 0;
 			left: 0;
 			right: 0;
 			bottom: 0;
 			z-index: 1;
+			/* Prevent pull-to-refresh */
+			overscroll-behavior: none;
+			touch-action: pan-y;
 		}
 
-		.overlay-full {
-			position: fixed;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			z-index: 2;
+		.mobile-swiper-active .scroll-stage {
+			height: 100dvh !important;
+			height: -webkit-fill-available !important;
+			max-height: 100dvh !important;
+			max-height: -webkit-fill-available !important;
+			overflow: hidden;
+			/* Create stacking context for proper z-index */
+			isolation: isolate;
+		}
+		
+		.mobile-swiper-active .scroll-stage.swiper {
+			width: 100%;
+			height: 100dvh !important;
+			height: -webkit-fill-available !important;
+			max-height: 100dvh !important;
+			max-height: -webkit-fill-available !important;
+			/* Prevent overscroll bounce */
+			overscroll-behavior: contain;
 		}
 
-		.overlay-gradient {
-			position: fixed;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 0;
+		.mobile-swiper-active .swiper-wrapper {
+			height: 100dvh !important;
+			height: -webkit-fill-available !important;
+			max-height: 100dvh !important;
+			max-height: -webkit-fill-available !important;
+		}
+
+		.mobile-swiper-active .swiper-slide {
+			height: 100dvh !important;
+			height: -webkit-fill-available !important;
+			max-height: 100dvh !important;
+			max-height: -webkit-fill-available !important;
+			min-height: 0 !important;
+			/* Don't set overflow:hidden here - it prevents scrollable slides from working */
+			display: flex;
+			flex-direction: column;
+			/* Prevent slide flicker */
+			backface-visibility: hidden;
+			-webkit-backface-visibility: hidden;
+			transform: translateZ(0);
+			will-change: transform;
+		}
+
+		/* Hide inactive slides to prevent content from bleeding through during transitions */
+		.mobile-swiper-active .swiper-slide:not(.swiper-slide-active):not(.swiper-slide-next):not(.swiper-slide-prev) {
+			visibility: hidden;
+		}
+
+		/* Ensure active slide and adjacent slides are visible but properly layered */
+		.mobile-swiper-active .swiper-slide-active {
 			z-index: 3;
 		}
-
-		/* Base scroll-panel styles */
-		.scroll-panel {
-			min-height: 100vh;
-			position: relative;
+		.mobile-swiper-active .swiper-slide-next {
+			z-index: 2;
+		}
+		.mobile-swiper-active .swiper-slide-prev {
+			z-index: 1;
 		}
 
-		/* ========== SECTION 0 (Hero) - Original behavior ========== */
-		.scroll-panel#home,
-		.scroll-panel:nth-child(1) {
-			background: transparent;
-			position: relative;
+		/* Non-scrollable slides should clip overflow */
+		.mobile-swiper-active .swiper-slide#home,
+		.mobile-swiper-active .swiper-slide#about,
+		.mobile-swiper-active .swiper-slide#contact {
+			overflow: hidden;
+		}
+
+		/* Background layers - use absolute positioning to stay in stacking context */
+		.mobile-swiper-active .base-background,
+		.mobile-swiper-active .background-image-layer,
+		.mobile-swiper-active .overlay-full,
+		.mobile-swiper-active .overlay-gradient {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			pointer-events: none;
+			/* GPU acceleration to prevent flicker */
+			transform: translateZ(0);
+			backface-visibility: hidden;
+			-webkit-backface-visibility: hidden;
+		}
+
+		.mobile-swiper-active .base-background {
+			z-index: 1;
+		}
+
+		.mobile-swiper-active .background-image-layer {
+			z-index: 2;
+			transition: opacity 0.3s ease;
+		}
+
+		.mobile-swiper-active .overlay-full {
+			z-index: 3;
+			transition: opacity 0.3s ease;
+		}
+
+		.mobile-swiper-active .overlay-gradient {
+			z-index: 4;
+			transition: opacity 0.3s ease;
+		}
+
+		/* Swiper container sits above background - use 2D transforms only */
+		.mobile-swiper-active .swiper-wrapper {
 			z-index: 10;
+			position: relative;
+			transform-style: flat !important;
+			-webkit-transform-style: flat !important;
 		}
 
-		.scroll-panel#home .section,
-		.scroll-panel#home .container,
-		.scroll-panel#home .hero,
-		.scroll-panel:nth-child(1) .section,
-		.scroll-panel:nth-child(1) .container {
-			background: transparent !important;
+		/* Ensure slides use 2D transforms and proper stacking */
+		.mobile-swiper-active .swiper-slide {
+			transform-style: flat !important;
+			-webkit-transform-style: flat !important;
 		}
 
-		/* ========== SECTION 1 (About) - Sticky behavior with tolerance ========== */
-		.scroll-panel#about,
-		.scroll-panel:nth-child(2) {
+		/* Hero slide - background image directly on the slide */
+		.mobile-swiper-active .swiper-slide#home {
+			background-image: var(--mobile-bg-image);
+			background-size: cover;
+			background-position: right bottom;
+			background-repeat: no-repeat;
+			position: relative !important;
+		}
+
+		/* Hero overlay - NONE on light theme */
+		.mobile-swiper-active .swiper-slide#home::before {
+			content: '';
+			position: absolute;
+			inset: 0;
 			background: transparent;
-			position: sticky;
-			top: 0;
-			z-index: 11;
-			/* Tolerance area - extra height for scrolling before next section covers */
-			margin-bottom: 30vh;
+			z-index: 0;
+			pointer-events: none;
 		}
 
-		.scroll-panel#about .section,
-		.scroll-panel#about .container,
-		.scroll-panel:nth-child(2) .section,
-		.scroll-panel:nth-child(2) .container {
-			background: transparent !important;
+		/* Hero overlay - subtle dark overlay only on dark theme */
+		html.dark .mobile-swiper-active .swiper-slide#home::before {
+			background: rgba(0, 0, 0, 0.25);
 		}
 
-		/* ========== SECTION 2+ (Skills onward) - Card stacking ========== */
-		.scroll-panel:nth-child(n+3) {
-			position: sticky;
-			top: 0;
-			background: var(--bg-primary);
-			/* Shadow for depth effect as cards stack */
-			box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08), 0 -2px 8px rgba(0, 0, 0, 0.04);
-			/* Rounded top corners for card effect */
+		/* Hero content above overlay */
+		.mobile-swiper-active .swiper-slide#home .section,
+		.mobile-swiper-active .swiper-slide#home .container,
+		.mobile-swiper-active .swiper-slide#home .hero {
+			position: relative;
+			z-index: 1;
+		}
+
+		/* About slide - same background image */
+		.mobile-swiper-active .swiper-slide#about {
+			background-image: var(--mobile-bg-image);
+			background-size: cover;
+			background-position: right bottom;
+			background-repeat: no-repeat;
+			position: relative !important;
+		}
+
+		/* About slide - no overlay on light theme */
+		.mobile-swiper-active .swiper-slide#about::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: transparent;
+			z-index: 0;
+			pointer-events: none;
+		}
+
+		/* About slide - strong gradient overlay on dark theme (matching original) */
+		html.dark .mobile-swiper-active .swiper-slide#about::before {
+			/* Dark mode color: 7, 13, 23 - same as desktop */
+			background: linear-gradient(
+				180deg,
+				rgba(7, 13, 23, 1) 0%,
+				rgba(7, 13, 23, 0.8) 35%,
+				rgba(7, 13, 23, 0) 50%
+			);
+		}
+
+		/* About content */
+		.mobile-swiper-active .swiper-slide#about .section,
+		.mobile-swiper-active .swiper-slide#about .container {
+			position: relative;
+			z-index: 1;
+		}
+
+		/* About container - glassmorphism blur effect (as it was originally) */
+		.mobile-swiper-active .swiper-slide#about .about-container {
+			position: relative;
+			z-index: 1;
+		}
+
+		.mobile-swiper-active .swiper-slide#about .about-container::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: transparent;
+			backdrop-filter: blur(12px);
+			-webkit-backdrop-filter: blur(12px);
+			mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+			z-index: -1;
+			border-radius: inherit;
+		}
+
+		/* Card slides (Skills onwards) - solid background with card effect */
+		.mobile-swiper-active .swiper-slide#skills,
+		.mobile-swiper-active .swiper-slide#projects,
+		.mobile-swiper-active .swiper-slide#mobile-timeline,
+		.mobile-swiper-active .swiper-slide#contact {
+			background: var(--bg-primary) !important;
 			border-top-left-radius: 20px;
 			border-top-right-radius: 20px;
+			box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08), 0 -2px 8px rgba(0, 0, 0, 0.04);
 		}
 
-		html.dark .scroll-panel:nth-child(n+3) {
+		html.dark .mobile-swiper-active .swiper-slide#skills,
+		html.dark .mobile-swiper-active .swiper-slide#projects,
+		html.dark .mobile-swiper-active .swiper-slide#mobile-timeline,
+		html.dark .mobile-swiper-active .swiper-slide#contact {
 			box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.3), 0 -2px 8px rgba(0, 0, 0, 0.2);
 		}
 
-		/* Z-index stacking for card sections (starting from section 2) */
-		.scroll-panel:nth-child(3) { z-index: 30; }  /* Skills */
-		.scroll-panel:nth-child(4) { z-index: 40; }  /* Projects */
-		.scroll-panel:nth-child(5) { z-index: 50; }  /* Timeline */
-		.scroll-panel:nth-child(6) { z-index: 60; }  /* Contact */
-		.scroll-panel:nth-child(7) { z-index: 70; }
-		.scroll-panel:nth-child(8) { z-index: 80; }
-
-		/* Ensure card sections have solid background */
-		.scroll-panel:nth-child(n+3) .section,
-		.scroll-panel:nth-child(n+3) .container {
+		/* Ensure content in card slides has proper background */
+		.mobile-swiper-active .swiper-slide#skills .section,
+		.mobile-swiper-active .swiper-slide#skills .container,
+		.mobile-swiper-active .swiper-slide#projects .section,
+		.mobile-swiper-active .swiper-slide#projects .container,
+		.mobile-swiper-active .swiper-slide#mobile-timeline .section,
+		.mobile-swiper-active .swiper-slide#mobile-timeline .container,
+		.mobile-swiper-active .swiper-slide#contact .section,
+		.mobile-swiper-active .swiper-slide#contact .container {
 			background: var(--bg-primary);
 			border-top-left-radius: 20px;
 			border-top-right-radius: 20px;
 		}
 
-		/* Timeline section */
-		#timeline {
-			background: var(--bg-primary);
-			position: sticky;
-			top: 0;
-			box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
-			border-top-left-radius: 20px;
-			border-top-right-radius: 20px;
+		/* Skills section - make the whole slide scrollable */
+		.mobile-swiper-active .swiper-slide#skills {
+			overflow-y: auto !important;
+			-webkit-overflow-scrolling: touch;
+			overscroll-behavior: contain;
 		}
 
-		html.dark #timeline {
-			box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.3);
+		.mobile-swiper-active .swiper-slide#skills .skills-grid {
+			padding-bottom: 120px;
 		}
 
-		/* Ensure proper stacking for content visibility */
-		.scroll-panel .section {
+		/* Projects section - make the whole slide scrollable */
+		.mobile-swiper-active .swiper-slide#projects {
+			overflow-y: auto !important;
+			-webkit-overflow-scrolling: touch;
+			overscroll-behavior: contain;
+		}
+
+		.mobile-swiper-active .swiper-slide#projects .project-panels {
+			max-height: none;
+			overflow: visible;
+			padding-bottom: 120px;
+		}
+
+		/* Timeline slide - make the whole slide scrollable */
+		.mobile-swiper-active .swiper-slide#mobile-timeline {
+			overflow-y: auto !important;
+			-webkit-overflow-scrolling: touch;
+			overscroll-behavior: contain;
+		}
+
+		.mobile-swiper-active .swiper-slide#mobile-timeline .timeline-container {
+			min-height: auto;
+			padding-bottom: 120px;
+		}
+
+		/* Reset base scroll-panel styles when in Swiper mode */
+		.mobile-swiper-active .scroll-panel {
+			min-height: 0 !important;
+			max-height: 100dvh !important;
+			max-height: -webkit-fill-available !important;
 			position: relative;
+			height: 100% !important;
+		}
+
+		.mobile-swiper-active .scroll-panel .section {
+			position: relative;
+			min-height: 0 !important;
+			height: 100% !important;
+			max-height: 100dvh !important;
+			max-height: -webkit-fill-available !important;
+		}
+
+		/* Ensure content doesn't overflow the slide */
+		.mobile-swiper-active .swiper-slide .container {
+			max-height: 100%;
+			overflow: hidden;
+		}
+
+		/* Allow overflow on scrollable slides */
+		.mobile-swiper-active .swiper-slide#skills .container,
+		.mobile-swiper-active .swiper-slide#projects .container,
+		.mobile-swiper-active .swiper-slide#mobile-timeline .container {
+			overflow: visible;
+		}
+
+		/* Swiper creative effect shadow styling - reduce for cleaner look */
+		.mobile-swiper-active .swiper-slide-shadow-left,
+		.mobile-swiper-active .swiper-slide-shadow-right,
+		.mobile-swiper-active .swiper-slide-shadow {
+			background: rgba(0, 0, 0, 0.05) !important;
+			opacity: 0.5;
+		}
+
+		html.dark .mobile-swiper-active .swiper-slide-shadow-left,
+		html.dark .mobile-swiper-active .swiper-slide-shadow-right,
+		html.dark .mobile-swiper-active .swiper-slide-shadow {
+			background: rgba(0, 0, 0, 0.15) !important;
+		}
+
+		/* Hide scrollbar for cleaner look */
+		.mobile-swiper-active .swiper-slide::-webkit-scrollbar {
+			display: none;
+		}
+
+		.mobile-swiper-active .swiper-slide {
+			scrollbar-width: none;
+		}
+
+		/* Prevent content from going under mobile navbar */
+		.mobile-swiper-active .swiper-slide#contact {
+			padding-bottom: 100px;
+		}
+
+		/* Fix for contact section layout */
+		.mobile-swiper-active .swiper-slide#contact .section {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			min-height: 100%;
 		}
 	}
 
