@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Analytics from '@vercel/analytics/astro'
 ---
 
 <!doctype html>
@@ -23,6 +24,7 @@ import '../styles/global.css';
 			<div class="decorative-circle circle-3"></div>
 			
 			<main class="content">
+        <Analytics/>
 				<div class="logo">CR</div>
 				<div class="divider"></div>
 				<h1>Coming Soon</h1>
