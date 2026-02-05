@@ -143,13 +143,15 @@ if (propCategories && propCategories.length > 0) {
 ---
 
 <section id="projects" class="container lg:pb-16! projects min-h-screen max-h-screen w-full flex max-lg:pb-0!">
-	<div class="w-full flex flex-col items-center gap-4 min-h-0 flex-1">
-		<div class="shrink-0">
+	<div class="w-full flex flex-col items-center min-h-0 flex-1">
+		<div class="shrink-0 pt-4">
 			<SectionTitle number="03" title="Featured Projects" />
 		</div>
-		<div class="flex flex-col items-center lg:justify-center gap-4 flex-1 min-h-0 w-full relative">
-      <!-- Tabs -->
-      <div class="project-tabs shrink-0 absolute bottom-4 left-1/2 -translate-x-1/2 z-90 lg:static lg:translate-x-0" role="tablist">
+		
+		<!-- Desktop: Tab layout -->
+		<div class="hidden lg:flex flex-col items-center lg:justify-center flex-1 min-h-0 w-full">
+      <!-- Desktop Tabs -->
+      <div class="project-tabs shrink-0" role="tablist">
         {categories.map((category, index) => (
           <button
             class={`project-tab ${index === 0 ? 'active' : ''}`}
@@ -163,7 +165,7 @@ if (propCategories && propCategories.length > 0) {
         ))}
       </div>
 
-      <!-- Tab Panels -->
+      <!-- Desktop: Tab Panels with grid -->
       <div class="project-panels no-scrollbar">
         {categories.map((category, index) => (
           <div
@@ -173,7 +175,7 @@ if (propCategories && propCategories.length > 0) {
             aria-hidden={index === 0 ? 'false' : 'true'}
             data-panel={category.id}
           >
-            <div class="projects-grid max-lg:pb-28">
+            <div class="projects-grid">
               {category.projects.map((project) => (
                 <ProjectCard {...project} />
               ))}
@@ -182,10 +184,50 @@ if (propCategories && propCategories.length > 0) {
         ))}
       </div>
     </div>
+
+    <!-- Mobile: Vertical stack with carousel, dots, and tabs -->
+    <div class="project-panels-mobile lg:hidden">
+      {categories.map((category, index) => (
+        <div
+          id={`panel-mobile-${category.id}`}
+          class={`project-panel-mobile ${index === 0 ? 'active' : ''}`}
+          role="tabpanel"
+          aria-hidden={index === 0 ? 'false' : 'true'}
+          data-panel-mobile={category.id}
+        >
+          <div class="projects-carousel swiper" data-projects-carousel={category.id}>
+            <div class="swiper-wrapper projects-carousel-wrapper">
+              {category.projects.map((project) => (
+                <div class="swiper-slide projects-carousel-slide">
+                  <ProjectCard {...project} />
+                </div>
+              ))}
+            </div>
+          </div>
+          <!-- Pagination dots outside swiper -->
+          <div class="projects-pagination" data-projects-pagination={category.id}></div>
+        </div>
+      ))}
+      <!-- Mobile Tabs at bottom -->
+      <div class="project-tabs-mobile" role="tablist">
+        {categories.map((category, index) => (
+          <button
+            class={`project-tab ${index === 0 ? 'active' : ''}`}
+            role="tab"
+            aria-selected={index === 0 ? 'true' : 'false'}
+            aria-controls={`panel-mobile-${category.id}`}
+            data-tab={category.id}
+          >
+            {category.label}
+          </button>
+        ))}
+      </div>
+    </div>
 	</div>
 </section>
 
 <style>
+  /* Desktop: Tab Panels */
   .project-panels {
     width: 100%;
     position: relative;
@@ -195,128 +237,263 @@ if (propCategories && propCategories.length > 0) {
   }
 
   .project-panels::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+    display: none;
   }
-	.project-tabs {
-		display: flex;
-		gap: 0.5rem;
-		padding: 0.375rem;
-		background: rgba(255, 255, 255, 0.25);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
-		border-radius: 100px;
-		border: 1px solid rgba(255, 255, 255, 0.3);
-	}
 
-	html.dark .project-tabs {
-		background: rgba(30, 41, 59, 0.4);
-		border-color: rgba(148, 163, 184, 0.2);
-	}
+  /* Mobile-only styles - wrapped in media query */
+  @media (max-width: 1023px) {
+    /* Mobile: Main container with flex layout */
+    .project-panels-mobile {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 0.5rem 0;
+    }
 
-	.project-tab {
-		padding: 0.75rem 1.5rem;
-		border: none;
-		background: transparent;
-		color: var(--text-secondary);
-		font-family: inherit;
-		font-size: 0.9rem;
-		font-weight: 400;
-		letter-spacing: 0.02em;
-		cursor: pointer;
-		border-radius: 100px;
-		transition: all 0.3s ease;
-		position: relative;
-	}
+    .project-panel-mobile {
+      display: none;
+      flex: 1;
+      min-height: 0;
+      flex-direction: column;
+    }
 
-	.project-tab:hover {
-		color: var(--text-primary);
-	}
+    .project-panel-mobile.active {
+      display: flex;
+      animation: fadeIn 0.4s ease;
+    }
 
-	.project-tab.active {
-		background: rgba(255, 255, 255, 0.6);
-		color: var(--text-primary);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-	}
+    /* Mobile: Horizontal carousel fills available space */
+    .projects-carousel {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
 
-	html.dark .project-tab.active {
-		background: rgba(30, 41, 59, 0.8);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-	}
+    /* Swiper wrapper - horizontal flex row */
+    .projects-carousel .swiper-wrapper {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      align-items: stretch;
+      height: 100%;
+    }
 
-	.project-panel {
-		display: none;
-		animation: fadeIn 0.4s ease;
-	}
+    .projects-carousel .swiper-slide {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 0 1rem;
+      box-sizing: border-box;
+      width: 100% !important;
+      min-width: 100% !important;
+      height: 100% !important;
+      flex-shrink: 0 !important;
+    }
 
-	.project-panel.active {
-		display: block;
-	}
+    /* Project card fills the entire slide */
+    .projects-carousel .swiper-slide :global(.project-card) {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      display: flex;
+      flex-direction: column;
+    }
 
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
+    /* Pagination dots - static flow, not absolute */
+    .projects-pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      padding: 0.75rem 0;
+      flex-shrink: 0;
+    }
+  }
 
-	.projects-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 1.5rem;
-		width: 100%;
-		max-width: 1200px;
-		margin: 0 auto;
-	}
+  /* Mobile pagination bullets - only on mobile */
+  @media (max-width: 1023px) {
+    .projects-pagination .swiper-pagination-bullet {
+      width: 8px;
+      height: 8px;
+      background: #ff8c3c !important;
+      opacity: 0.4 !important;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
 
-	/* Mobile (≤1024px) */
-	@media (max-width: 1024px) {
-		.project-tabs {
-			gap: 0.25rem;
-			padding: 0.25rem;
-		}
+    html.dark .projects-pagination .swiper-pagination-bullet {
+      background: #ff8c3c !important;
+      opacity: 0.5 !important;
+    }
 
-		.project-tab {
-			padding: 0.625rem 1rem;
-			font-size: 0.85rem;
-		}
-	}
+    .projects-pagination .swiper-pagination-bullet-active {
+      background: #ff8c3c !important;
+      opacity: 1 !important;
+      transform: scale(1.3);
+    }
 
-	/* Desktop (>1024px) */
-	@media (min-width: 1025px) {
-		.projects-grid {
-			grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-		}
-	}
+    /* Mobile tabs at bottom */
+    .project-tabs-mobile {
+      display: flex;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.25rem;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 100px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      flex-shrink: 0;
+      margin: 0 auto;
+    }
+
+    html.dark .project-tabs-mobile {
+      background: rgba(30, 41, 59, 0.4);
+      border-color: rgba(148, 163, 184, 0.2);
+    }
+
+    .project-tabs-mobile .project-tab {
+      padding: 0.625rem 1rem;
+      font-size: 0.85rem;
+    }
+  }
+
+  /* Desktop tabs */
+  .project-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.375rem;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 100px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    margin-bottom: 1rem;
+  }
+
+  html.dark .project-tabs {
+    background: rgba(30, 41, 59, 0.4);
+    border-color: rgba(148, 163, 184, 0.2);
+  }
+
+  .project-tab {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    border-radius: 100px;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .project-tab:hover {
+    color: var(--text-primary);
+  }
+
+  .project-tab.active {
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  html.dark .project-tab.active {
+    background: rgba(30, 41, 59, 0.8);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .project-panel {
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .project-panel.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .projects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Desktop (>1024px) */
+  @media (min-width: 1025px) {
+    .projects-grid {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+  }
 </style>
 
 <script>
 	function initProjectTabs() {
-		const tabs = document.querySelectorAll('.project-tab');
-		const panels = document.querySelectorAll('.project-panel');
+		// Get all tabs (both desktop and mobile)
+		const allTabs = document.querySelectorAll('.project-tab');
+		const desktopPanels = document.querySelectorAll('.project-panel');
+		const mobilePanels = document.querySelectorAll('.project-panel-mobile');
 
-		tabs.forEach((tab) => {
+		allTabs.forEach((tab) => {
 			tab.addEventListener('click', () => {
-        console.log('tab clicked');
+				console.log('tab clicked');
 				const targetId = tab.getAttribute('data-tab');
 
-				// Update tabs
-				tabs.forEach((t) => {
+				// Update ALL tabs (both desktop and mobile stay in sync)
+				allTabs.forEach((t) => {
 					t.classList.remove('active');
 					t.setAttribute('aria-selected', 'false');
 				});
-				tab.classList.add('active');
-				tab.setAttribute('aria-selected', 'true');
+				// Activate all tabs with the same data-tab value
+				allTabs.forEach((t) => {
+					if (t.getAttribute('data-tab') === targetId) {
+						t.classList.add('active');
+						t.setAttribute('aria-selected', 'true');
+					}
+				});
 
-				// Update panels
-				panels.forEach((panel) => {
+				// Update desktop panels
+				desktopPanels.forEach((panel) => {
 					const panelId = panel.getAttribute('data-panel');
 					if (panelId === targetId) {
 						panel.classList.add('active');
 						panel.setAttribute('aria-hidden', 'false');
+					} else {
+						panel.classList.remove('active');
+						panel.setAttribute('aria-hidden', 'true');
+					}
+				});
+
+				// Update mobile panels
+				mobilePanels.forEach((panel) => {
+					const panelId = panel.getAttribute('data-panel-mobile');
+					if (panelId === targetId) {
+						panel.classList.add('active');
+						panel.setAttribute('aria-hidden', 'false');
+						// Trigger Swiper update when panel becomes visible
+						const carousel = panel.querySelector('[data-projects-carousel]') as HTMLElement & { swiper?: { update: () => void } };
+						if (carousel?.swiper) {
+							setTimeout(() => carousel.swiper?.update(), 50);
+						}
 					} else {
 						panel.classList.remove('active');
 						panel.setAttribute('aria-hidden', 'true');

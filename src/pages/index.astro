@@ -146,11 +146,11 @@ console.log('[Index] Content about object:', content?.about);
 				/>
 			</section>
 
-			<section id="skills" class="scroll-panel flex min-h-screen w-full items-center justify-center h-[calc(100dvh+300px)] lg:h-screen">
+			<section id="skills" class="scroll-panel flex min-h-screen w-full items-center justify-center h-screen">
 				<Skills categories={config.skills.categories} />
 			</section>
 
-			<section id="projects" class="scroll-panel flex min-h-screen h-[calc(100dvh+300px)] lg:h-screen w-full items-center justify-center">
+			<section id="projects" class="scroll-panel flex min-h-screen h-screen w-full items-center justify-center">
 				<Projects projects={config.projects} />
 			</section>
 
@@ -174,9 +174,10 @@ console.log('[Index] Content about object:', content?.about);
 	import gsap from 'gsap';
 	import ScrollTrigger from 'gsap/ScrollTrigger';
 	import Swiper from 'swiper';
-	import { EffectCreative, Mousewheel, HashNavigation } from 'swiper/modules';
+	import { EffectCreative, Mousewheel, HashNavigation, Pagination } from 'swiper/modules';
 	import 'swiper/css';
 	import 'swiper/css/effect-creative';
+	import 'swiper/css/pagination';
 
 	gsap.registerPlugin(ScrollTrigger);
 
@@ -735,14 +736,15 @@ console.log('[Index] Content about object:', content?.about);
 		// Add swiper classes to existing structure
 		scrollStage.classList.add('swiper');
 		
-		// Create wrapper div for slides
-		const existingWrapper = scrollStage.querySelector('.swiper-wrapper');
+		// Create wrapper div for slides - check for DIRECT child wrapper only
+		const existingWrapper = scrollStage.querySelector(':scope > .swiper-wrapper');
 		if (!existingWrapper) {
 			const wrapper = document.createElement('div');
 			wrapper.className = 'swiper-wrapper';
+			wrapper.setAttribute('data-main-wrapper', 'true');
 			
 			// Move all scroll-panel sections into wrapper, EXCLUDING desktop-timeline on mobile
-			const panels = scrollStage.querySelectorAll('.scroll-panel');
+			const panels = scrollStage.querySelectorAll(':scope > .scroll-panel');
 			panels.forEach(panel => {
 				// Skip desktop-timeline on mobile - it should not be a Swiper slide
 				if (panel.id === 'desktop-timeline') {
@@ -757,8 +759,8 @@ console.log('[Index] Content about object:', content?.about);
 		}
 		
 
-		// Mark slides with scrollable content
-		const slidesWithScroll = ['skills', 'projects', 'mobile-timeline'];
+		// Mark slides with scrollable content (only timeline now - skills and projects use horizontal carousels)
+		const slidesWithScroll = ['mobile-timeline'];
 		slidesWithScroll.forEach(id => {
 			const slide = document.getElementById(id);
 			if (slide) {
@@ -772,16 +774,25 @@ console.log('[Index] Content about object:', content?.about);
 		// Initialize Swiper
 		mobileSwiper = new Swiper('.scroll-stage.swiper', swiperConfig);
 
-		// Force overflow-y on scrollable slides via JavaScript (CSS !important isn't working)
-		const scrollableSlideIds = ['skills', 'projects', 'mobile-timeline'];
+		// Force overflow-y on scrollable slides via JavaScript (only timeline now)
+		const scrollableSlideIds = ['mobile-timeline'];
 		scrollableSlideIds.forEach(id => {
 			const slide = document.getElementById(id);
 			if (slide) {
 				slide.style.overflowY = 'auto';
 				slide.style.webkitOverflowScrolling = 'touch';
 				slide.style.overscrollBehavior = 'contain';
-				// Mark as having potential scroll content
 				slide.dataset.hasScroll = 'true';
+			}
+		});
+
+		// Initialize nested horizontal Swipers for Skills and Projects
+		// Wait for next frame to ensure main Swiper is fully initialized
+		requestAnimationFrame(() => {
+			try {
+				initNestedHorizontalSwipers();
+			} catch (e) {
+				console.error('[Swiper] Failed to init nested swipers:', e);
 			}
 		});
 
@@ -866,6 +877,9 @@ console.log('[Index] Content about object:', content?.about);
 					if (currentSlide && currentSlide.dataset.hasScroll === 'true') {
 						currentSlide.scrollTop = 0;
 					}
+
+					// Update nested Swipers when slide becomes visible
+					updateNestedSwipersOnSlide(currentSlide);
 				},
 				init: function() {
 					// Dispatch initial section
@@ -1025,10 +1039,151 @@ console.log('[Index] Content about object:', content?.about);
 		});
 	}
 
+	// Store nested Swiper instances for cleanup
+	let nestedSwipers = [];
+
+	// Update nested Swipers when a slide becomes visible
+	function updateNestedSwipersOnSlide(slide) {
+		if (!slide) return;
+		
+		// Find any Swiper instances inside this slide and update them
+		const nestedContainers = slide.querySelectorAll('.swiper');
+		nestedContainers.forEach(container => {
+			if (container.swiper) {
+				console.log('[Swiper] Updating nested swiper on slide change');
+				container.swiper.update();
+			}
+		});
+	}
+
+	function initNestedHorizontalSwipers() {
+		try {
+			// Clean up any existing nested Swipers
+			nestedSwipers.forEach(swiper => {
+				if (swiper && swiper.destroy) {
+					swiper.destroy(true, true);
+				}
+			});
+			nestedSwipers = [];
+
+			// Initialize Skills carousel
+			const skillsCarousel = document.querySelector('[data-skills-carousel]');
+			if (skillsCarousel) {
+				// Pagination is now a sibling of the carousel, in .skills-panels-mobile
+				const skillsWrapper = skillsCarousel.closest('.skills-panels-mobile');
+				const skillsPaginationEl = skillsWrapper?.querySelector('.skills-pagination');
+				console.log('[Swiper] Initializing Skills carousel...', skillsCarousel);
+				console.log('[Swiper] Skills pagination element found:', !!skillsPaginationEl);
+				
+				console.log('[Swiper] Skills carousel dimensions:', skillsCarousel.offsetWidth, 'x', skillsCarousel.offsetHeight);
+				console.log('[Swiper] Skills slides found:', skillsCarousel.querySelectorAll('.swiper-slide').length);
+				
+				const skillsSwiper = new Swiper(skillsCarousel, {
+					modules: [Pagination],
+					direction: 'horizontal',
+					slidesPerView: 1,
+					spaceBetween: 20,
+					speed: 300,
+					grabCursor: true,
+					// Use explicit pagination element reference with custom rendering
+					pagination: skillsPaginationEl ? {
+						el: skillsPaginationEl,
+						clickable: true,
+						bulletClass: 'swiper-pagination-bullet',
+						bulletActiveClass: 'swiper-pagination-bullet-active',
+						renderBullet: function (index, className) {
+							return '<span class="' + className + '" style="background-color: #ff8c3c !important;"></span>';
+						},
+					} : false,
+					// Allow vertical swipe to pass through to parent
+					touchReleaseOnEdges: true,
+					threshold: 5,
+					touchAngle: 30,
+					nested: true,
+					// Observe for visibility changes
+					observer: true,
+					observeParents: true,
+					observeSlideChildren: true,
+					on: {
+						init: function() {
+							console.log('[Swiper] Skills carousel initialized, slides:', this.slides.length);
+							console.log('[Swiper] Skills carousel container size:', this.width, 'x', this.height);
+							// Force update after a short delay to ensure dimensions are correct
+							setTimeout(() => {
+								this.update();
+								console.log('[Swiper] Skills carousel updated, width:', this.width, 'slides:', this.slides.length);
+							}, 100);
+						},
+						slideChange: function() {
+							console.log('[Swiper] Skills slide changed to:', this.activeIndex);
+						}
+					}
+				});
+				// Store reference on element for updates
+				skillsCarousel.swiper = skillsSwiper;
+				nestedSwipers.push(skillsSwiper);
+			} else {
+				console.log('[Swiper] Skills carousel element not found!');
+			}
+
+			// Initialize Projects carousels (one for each category tab)
+			const projectsCarousels = document.querySelectorAll('[data-projects-carousel]');
+			projectsCarousels.forEach(carousel => {
+				const categoryId = carousel.getAttribute('data-projects-carousel');
+				// Pagination is now a sibling of the carousel, in .project-panel-mobile
+				const panelMobile = carousel.closest('.project-panel-mobile');
+				const paginationEl = panelMobile?.querySelector(`[data-projects-pagination="${categoryId}"]`);
+				
+				console.log(`[Swiper] Initializing Projects carousel (${categoryId})...`);
+				console.log(`[Swiper] Projects pagination element (${categoryId}) found:`, !!paginationEl);
+				const projectsSwiper = new Swiper(carousel, {
+					modules: [Pagination],
+					direction: 'horizontal',
+					slidesPerView: 1,
+					spaceBetween: 20,
+					speed: 300,
+					grabCursor: true,
+					// Use custom rendering for orange bullets
+					pagination: paginationEl ? {
+						el: paginationEl,
+						clickable: true,
+						bulletClass: 'swiper-pagination-bullet',
+						bulletActiveClass: 'swiper-pagination-bullet-active',
+						renderBullet: function (index, className) {
+							return '<span class="' + className + '" style="background-color: #ff8c3c !important;"></span>';
+						},
+					} : false,
+					// Allow vertical swipe to pass through to parent
+					touchReleaseOnEdges: true,
+					threshold: 5,
+					touchAngle: 30,
+					nested: true,
+					// Observe for visibility changes
+					observer: true,
+					observeParents: true,
+					observeSlideChildren: true,
+					on: {
+						init: function() {
+							console.log(`[Swiper] Projects carousel (${categoryId}) initialized, slides:`, this.slides.length);
+						}
+					}
+				});
+				
+				// Store reference on the element for tab switching updates
+				carousel.swiper = projectsSwiper;
+				nestedSwipers.push(projectsSwiper);
+			});
+
+			console.log(`[Swiper] Initialized ${nestedSwipers.length} nested horizontal carousels`);
+		} catch (error) {
+			console.error('[Swiper] Error initializing nested carousels:', error);
+		}
+	}
+
 	function initNestedScrollHandling(swiper, sections) {
 		// For slides with overflowing content, we need special handling
 		// The slide itself is the scroll container (it has overflow-y: auto)
-		const slidesWithScroll = ['skills', 'projects', 'mobile-timeline'];
+		const slidesWithScroll = ['mobile-timeline'];
 		
 		slidesWithScroll.forEach(slideId => {
 			const slide = document.getElementById(slideId);
@@ -1335,6 +1490,14 @@ console.log('[Index] Content about object:', content?.about);
 	let currentMode = isMobile() ? 'mobile' : 'desktop';
 
 	function cleanupMobileSwiper() {
+		// Clean up nested Swipers first
+		nestedSwipers.forEach(swiper => {
+			if (swiper && swiper.destroy) {
+				swiper.destroy(true, true);
+			}
+		});
+		nestedSwipers = [];
+
 		if (mobileSwiper) {
 			console.log('[Swiper] Cleaning up mobile Swiper');
 			mobileSwiper.destroy(true, true);
@@ -1932,14 +2095,16 @@ console.log('[Index] Content about object:', content?.about);
 			overscroll-behavior: contain;
 		}
 
-		.mobile-swiper-active .swiper-wrapper {
+		/* Main Swiper wrapper - NOT nested carousels */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper {
 			height: 100dvh !important;
 			height: -webkit-fill-available !important;
 			max-height: 100dvh !important;
 			max-height: -webkit-fill-available !important;
 		}
 
-		.mobile-swiper-active .swiper-slide {
+		/* Main Swiper slides - NOT nested carousel slides */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide {
 			height: 100dvh !important;
 			height: -webkit-fill-available !important;
 			max-height: 100dvh !important;
@@ -1955,19 +2120,19 @@ console.log('[Index] Content about object:', content?.about);
 			will-change: transform;
 		}
 
-		/* Hide inactive slides to prevent content from bleeding through during transitions */
-		.mobile-swiper-active .swiper-slide:not(.swiper-slide-active):not(.swiper-slide-next):not(.swiper-slide-prev) {
+		/* Hide inactive main slides to prevent content from bleeding through during transitions */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide:not(.swiper-slide-active):not(.swiper-slide-next):not(.swiper-slide-prev) {
 			visibility: hidden;
 		}
 
-		/* Ensure active slide and adjacent slides are visible but properly layered */
-		.mobile-swiper-active .swiper-slide-active {
+		/* Ensure active main slide and adjacent slides are visible but properly layered */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide-active {
 			z-index: 3;
 		}
-		.mobile-swiper-active .swiper-slide-next {
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide-next {
 			z-index: 2;
 		}
-		.mobile-swiper-active .swiper-slide-prev {
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide-prev {
 			z-index: 1;
 		}
 
@@ -2014,16 +2179,16 @@ console.log('[Index] Content about object:', content?.about);
 			transition: opacity 0.3s ease;
 		}
 
-		/* Swiper container sits above background - use 2D transforms only */
-		.mobile-swiper-active .swiper-wrapper {
+		/* Main Swiper wrapper sits above background - use 2D transforms only */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper {
 			z-index: 10;
 			position: relative;
 			transform-style: flat !important;
 			-webkit-transform-style: flat !important;
 		}
 
-		/* Ensure slides use 2D transforms and proper stacking */
-		.mobile-swiper-active .swiper-slide {
+		/* Main Swiper slides use 2D transforms and proper stacking */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide {
 			transform-style: flat !important;
 			-webkit-transform-style: flat !important;
 		}
@@ -2135,41 +2300,85 @@ console.log('[Index] Content about object:', content?.about);
 		}
 
 		/* Ensure content in card slides has proper background */
-		.mobile-swiper-active .swiper-slide#skills .section,
-		.mobile-swiper-active .swiper-slide#skills .container,
-		.mobile-swiper-active .swiper-slide#projects .section,
+		.mobile-swiper-active .swiper-slide#skills .skills-section,
 		.mobile-swiper-active .swiper-slide#projects .container,
-		.mobile-swiper-active .swiper-slide#mobile-timeline .section,
 		.mobile-swiper-active .swiper-slide#mobile-timeline .container,
-		.mobile-swiper-active .swiper-slide#contact .section,
 		.mobile-swiper-active .swiper-slide#contact .container {
 			background: var(--bg-primary);
 			border-top-left-radius: 20px;
 			border-top-right-radius: 20px;
 		}
 
-		/* Skills section - make the whole slide scrollable */
+		/* Skills section - contains horizontal carousel, no vertical scroll */
 		.mobile-swiper-active .swiper-slide#skills {
-			overflow-y: auto !important;
-			-webkit-overflow-scrolling: touch;
-			overscroll-behavior: contain;
+			overflow: hidden !important;
 		}
 
-		.mobile-swiper-active .swiper-slide#skills .skills-grid {
-			padding-bottom: 120px;
+		/* Skills section wrapper hierarchy - ensure all containers flex properly */
+		.mobile-swiper-active .swiper-slide#skills .skills-section {
+			height: 100%;
+			display: flex;
+			flex-direction: column;
 		}
 
-		/* Projects section - make the whole slide scrollable */
+		.mobile-swiper-active .swiper-slide#skills .skills-section > div {
+			flex: 1;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.mobile-swiper-active .swiper-slide#skills .skills-section > div > div:last-child {
+			flex: 1;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+
+		/* Skills mobile wrapper - same pattern as Projects */
+		.mobile-swiper-active .skills-panels-mobile {
+			flex: 1;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+			width: 100%;
+			/* Explicit viewport-based height for Swiper */
+			height: calc(100dvh - 200px) !important;
+			min-height: calc(100dvh - 200px) !important;
+		}
+
+		/* Skills carousel container - take full height of wrapper */
+		.mobile-swiper-active .skills-carousel {
+			width: 100%;
+			position: relative;
+			/* Explicit height matching wrapper */
+			height: 100% !important;
+			min-height: 100% !important;
+		}
+
+		/* Projects section - contains horizontal carousel, no vertical scroll */
 		.mobile-swiper-active .swiper-slide#projects {
-			overflow-y: auto !important;
-			-webkit-overflow-scrolling: touch;
-			overscroll-behavior: contain;
+			overflow: hidden !important;
 		}
 
-		.mobile-swiper-active .swiper-slide#projects .project-panels {
-			max-height: none;
-			overflow: visible;
-			padding-bottom: 120px;
+		.mobile-swiper-active .swiper-slide#projects .projects {
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.mobile-swiper-active .swiper-slide#projects .projects > div {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			min-height: 0;
+		}
+
+		/* Projects carousel container */
+		.mobile-swiper-active .projects-carousel {
+			flex: 1;
+			min-height: 0;
+			width: 100%;
 		}
 
 		/* Timeline slide - make the whole slide scrollable */
@@ -2201,17 +2410,24 @@ console.log('[Index] Content about object:', content?.about);
 			max-height: -webkit-fill-available !important;
 		}
 
-		/* Ensure content doesn't overflow the slide */
-		.mobile-swiper-active .swiper-slide .container {
+		/* Ensure content doesn't overflow main slides */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide > .container {
 			max-height: 100%;
 			overflow: hidden;
 		}
 
-		/* Allow overflow on scrollable slides */
-		.mobile-swiper-active .swiper-slide#skills .container,
-		.mobile-swiper-active .swiper-slide#projects .container,
-		.mobile-swiper-active .swiper-slide#mobile-timeline .container {
+		/* Allow overflow on scrollable slides (only timeline now) */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide#mobile-timeline .container {
 			overflow: visible;
+		}
+
+		/* Skills and Projects containers should not overflow */
+		.mobile-swiper-active .swiper-slide#skills .skills-section,
+		.mobile-swiper-active .swiper-slide#projects .container {
+			overflow: hidden;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
 		}
 
 		/* Swiper creative effect shadow styling - reduce for cleaner look */
@@ -2228,12 +2444,12 @@ console.log('[Index] Content about object:', content?.about);
 			background: rgba(0, 0, 0, 0.15) !important;
 		}
 
-		/* Hide scrollbar for cleaner look */
-		.mobile-swiper-active .swiper-slide::-webkit-scrollbar {
+		/* Hide scrollbar for cleaner look on main slides */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide::-webkit-scrollbar {
 			display: none;
 		}
 
-		.mobile-swiper-active .swiper-slide {
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide {
 			scrollbar-width: none;
 		}
 
@@ -2249,6 +2465,101 @@ console.log('[Index] Content about object:', content?.about);
 			justify-content: center;
 			min-height: 100%;
 		}
+
+		/* Nested horizontal Swipers - Skills and Projects carousels */
+		.mobile-swiper-active .skills-carousel,
+		.mobile-swiper-active .projects-carousel {
+			touch-action: pan-x pan-y;
+			-webkit-user-select: none;
+			user-select: none;
+			/* Ensure carousel has explicit dimensions for Swiper to calculate */
+			height: 100%;
+			width: 100%;
+		}
+
+		/* Nested carousel wrapper - horizontal layout */
+		.mobile-swiper-active .skills-carousel > .swiper-wrapper,
+		.mobile-swiper-active .projects-carousel > .swiper-wrapper {
+			display: flex !important;
+			flex-direction: row !important;
+			flex-wrap: nowrap !important;
+			align-items: center;
+			height: 100%;
+		}
+
+		/* Ensure carousel container clips overflow */
+		.mobile-swiper-active .skills-carousel,
+		.mobile-swiper-active .projects-carousel {
+			overflow: hidden !important;
+		}
+
+		/* Nested carousel slides styling - force full width for one slide per view */
+		.mobile-swiper-active .skills-carousel > .swiper-wrapper > .swiper-slide,
+		.mobile-swiper-active .projects-carousel > .swiper-wrapper > .swiper-slide {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+			/* Force full width - one slide visible at a time */
+			width: 100% !important;
+			min-width: 100% !important;
+		}
+
+		/* Pagination styling for nested carousels */
+		.mobile-swiper-active .skills-pagination,
+		.mobile-swiper-active .projects-pagination {
+			position: absolute;
+			bottom: 100px;
+			left: 0;
+			right: 0;
+			display: flex;
+			justify-content: center;
+			gap: 8px;
+			z-index: 20;
+		}
+
+		.mobile-swiper-active .skills-pagination .swiper-pagination-bullet,
+		.mobile-swiper-active .projects-pagination .swiper-pagination-bullet,
+		.skills-pagination .swiper-pagination-bullet,
+		.projects-pagination .swiper-pagination-bullet {
+			width: 8px !important;
+			height: 8px !important;
+			background-color: #ff8c3c !important;
+			opacity: 0.4 !important;
+			border-radius: 50% !important;
+			transition: all 0.3s ease !important;
+			cursor: pointer !important;
+		}
+
+		html.dark .mobile-swiper-active .skills-pagination .swiper-pagination-bullet,
+		html.dark .mobile-swiper-active .projects-pagination .swiper-pagination-bullet,
+		html.dark .skills-pagination .swiper-pagination-bullet,
+		html.dark .projects-pagination .swiper-pagination-bullet {
+			background-color: #ff8c3c !important;
+			opacity: 0.5 !important;
+		}
+
+		.mobile-swiper-active .skills-pagination .swiper-pagination-bullet-active,
+		.mobile-swiper-active .projects-pagination .swiper-pagination-bullet-active,
+		.skills-pagination .swiper-pagination-bullet-active,
+		.projects-pagination .swiper-pagination-bullet-active {
+			background-color: #ff8c3c !important;
+			opacity: 1 !important;
+			transform: scale(1.3) !important;
+		}
+	}
+
+	/* Global pagination styles - orange theme (applies everywhere) */
+	.skills-pagination .swiper-pagination-bullet,
+	.projects-pagination .swiper-pagination-bullet {
+		background-color: #ff8c3c !important;
+		opacity: 0.4 !important;
+	}
+	
+	.skills-pagination .swiper-pagination-bullet-active,
+	.projects-pagination .swiper-pagination-bullet-active {
+		background-color: #ff8c3c !important;
+		opacity: 1 !important;
 	}
 
 </style>

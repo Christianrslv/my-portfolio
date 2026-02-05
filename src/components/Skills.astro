@@ -28,34 +28,59 @@ const {
 } = Astro.props;
 ---
 
-<section id="skills" class="container skills min-h-screen w-full flex h-full">
-	<div class="w-full flex flex-col items-center lg:justify-center gap-9 h-full">
-		<SectionTitle number="02" title="Skills & Technologies" />
-		<div class="skills-grid overflow-auto pb-96 lg:pb-0 no-scrollbar">
-			{categories.map((category) => (
-				<div class="skill-category">
-					<h3 class="category-title">{category.title}</h3>
-					<div class="skill-tags">
-						{category.skills.map((skill) => (
-							<span class="skill-tag">{skill}</span>
-						))}
+<section class="skills-section container w-full h-full flex flex-col">
+	<div class="w-full flex flex-col items-center min-h-0 flex-1">
+		<div class="shrink-0 pt-4">
+			<SectionTitle number="02" title="Skills & Technologies" />
+		</div>
+		
+		<!-- Desktop: Grid layout - completely hidden on mobile -->
+		<div class="hidden lg:flex flex-col items-center lg:justify-center flex-1 min-h-0 w-full">
+			<div class="skills-grid">
+				{categories.map((category) => (
+					<div class="skill-category">
+						<h3 class="category-title">{category.title}</h3>
+						<div class="skill-tags">
+							{category.skills.map((skill) => (
+								<span class="skill-tag">{skill}</span>
+							))}
+						</div>
 					</div>
+				))}
+			</div>
+		</div>
+
+		<!-- Mobile: Horizontal Swiper carousel -->
+		<div class="skills-panels-mobile lg:hidden">
+			<div class="skills-carousel swiper" data-skills-carousel>
+				<div class="swiper-wrapper skills-carousel-wrapper">
+					{categories.map((category, index) => (
+						<div class="swiper-slide skills-carousel-slide">
+							<div class="skill-category-mobile">
+								<h3 class="category-title">{category.title}</h3>
+								<div class="skill-tags">
+									{category.skills.map((skill) => (
+										<span class="skill-tag">{skill}</span>
+									))}
+								</div>
+							</div>
+						</div>
+					))}
 				</div>
-			))}
+			</div>
+			<!-- Pagination dots outside swiper for proper flow layout -->
+			<div class="skills-pagination"></div>
 		</div>
 	</div>
 </section>
 
 <style>
-	/* Transparent background - lets page gradient show through */
-	.skills {
+	/* Skills section wrapper */
+	.skills-section {
 		background: transparent;
 	}
 
-	html.dark .skills {
-		background: transparent;
-	}
-
+	/* Desktop: Grid layout - ONLY visible on lg+ screens */
 	.skills-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -76,7 +101,102 @@ const {
 		}
 	}
 
-	/* Container cards - lighter glassmorphism for floating effect */
+	/* Mobile-only styles - wrapped in media query */
+	@media (max-width: 1023px) {
+		/* Mobile: Wrapper with proper flex layout */
+		.skills-panels-mobile {
+			width: 100%;
+			flex: 1;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+			padding: 0.5rem 0;
+		}
+
+		/* Mobile: Horizontal carousel fills available space */
+		.skills-carousel {
+			width: 100%;
+			flex: 1;
+			min-height: 0;
+			overflow: hidden !important;
+		}
+
+		/* Swiper wrapper - horizontal flex row */
+		.skills-carousel .swiper-wrapper {
+			display: flex !important;
+			flex-direction: row !important;
+			flex-wrap: nowrap !important;
+			align-items: stretch;
+			height: 100%;
+		}
+
+		/* Swiper slides - full width and height */
+		.skills-carousel .swiper-slide {
+			display: flex;
+			align-items: stretch;
+			justify-content: center;
+			padding: 0 1rem;
+			box-sizing: border-box;
+			width: 100% !important;
+			min-width: 100% !important;
+			height: 100% !important;
+			flex-shrink: 0 !important;
+		}
+
+		/* Mobile card - fills the entire slide */
+		.skill-category-mobile {
+			width: 100%;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			background: rgba(255, 255, 255, 0.25);
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
+			padding: 2rem;
+			border-radius: 20px;
+			border: 1px solid rgba(255, 255, 255, 0.35);
+			box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+		}
+
+		html.dark .skill-category-mobile {
+			background: rgba(30, 41, 59, 0.35);
+			border: 1px solid rgba(148, 163, 184, 0.15);
+			box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+		}
+
+		/* Pagination dots - static flow, not absolute */
+		.skills-pagination {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 8px;
+			padding: 1rem 0;
+			flex-shrink: 0;
+		}
+
+		.skills-pagination .swiper-pagination-bullet {
+			width: 8px;
+			height: 8px;
+			background: #ff8c3c !important;
+			opacity: 0.4 !important;
+			border-radius: 50%;
+			transition: all 0.3s ease;
+		}
+
+		html.dark .skills-pagination .swiper-pagination-bullet {
+			background: #ff8c3c !important;
+			opacity: 0.5 !important;
+		}
+
+		.skills-pagination .swiper-pagination-bullet-active {
+			background: #ff8c3c !important;
+			opacity: 1 !important;
+			transform: scale(1.3);
+		}
+	}
+
+	/* Desktop cards - glassmorphism */
 	.skill-category {
 		background: rgba(255, 255, 255, 0.25);
 		backdrop-filter: blur(16px);
@@ -159,16 +279,5 @@ const {
 		background: rgba(30, 41, 59, 0.65);
 		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 		border-color: rgba(255, 140, 60, 0.4);
-	}
-
-	@media (max-width: 768px) {
-		.skills-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.skill-category {
-			padding: 2rem;
-			border-radius: 16px;
-		}
 	}
 </style>
