@@ -418,14 +418,29 @@ if (propCategories && propCategories.length > 0) {
     display: block;
   }
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
+  /* Desktop: fadeIn with translateY for visual polish */
+  @media (min-width: 1025px) {
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
-    to {
-      opacity: 1;
-      transform: translateY(0);
+  }
+
+  /* Mobile: opacity-only fadeIn to avoid conflicting with Swiper's transform positioning */
+  @media (max-width: 1024px) {
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
     }
   }
 
@@ -455,7 +470,6 @@ if (propCategories && propCategories.length > 0) {
 
 		allTabs.forEach((tab) => {
 			tab.addEventListener('click', () => {
-				console.log('tab clicked');
 				const targetId = tab.getAttribute('data-tab');
 
 				// Update ALL tabs (both desktop and mobile stay in sync)
@@ -489,10 +503,13 @@ if (propCategories && propCategories.length > 0) {
 					if (panelId === targetId) {
 						panel.classList.add('active');
 						panel.setAttribute('aria-hidden', 'false');
-						// Trigger Swiper update when panel becomes visible
+						// Trigger Swiper update when panel becomes visible.
+						// Two updates: first quick one for initial layout, second after fadeIn
+						// animation completes (400ms) to get accurate dimensions.
 						const carousel = panel.querySelector('[data-projects-carousel]') as HTMLElement & { swiper?: { update: () => void } };
 						if (carousel?.swiper) {
-							setTimeout(() => carousel.swiper?.update(), 50);
+							setTimeout(() => carousel.swiper?.update(), 100);
+							setTimeout(() => carousel.swiper?.update(), 450);
 						}
 					} else {
 						panel.classList.remove('active');

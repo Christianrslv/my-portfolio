@@ -41,13 +41,10 @@ let content = null;
 
 // Method 1: Try Content Collections
 try {
-	console.log('[Index] Attempting Content Collections...');
 	const portfolioEntries = await getCollection('portfolio');
-	console.log('[Index] Content Collections - entries:', portfolioEntries.length);
 	
 	if (portfolioEntries.length > 0) {
 		content = await getPortfolioContent();
-		console.log('[Index] Content Collections loaded:', !!content);
 	}
 } catch (error) {
 	console.warn('[Index] Content Collections failed:', error);
@@ -56,21 +53,10 @@ try {
 // Method 2: Fallback to simple glob loader
 if (!content) {
 	try {
-		console.log('[Index] Trying simple glob loader...');
 		content = await getPortfolioContentSimple();
-		console.log('[Index] Simple loader result:', !!content);
 	} catch (error) {
 		console.warn('[Index] Simple loader failed:', error);
 	}
-}
-
-// Debug logging
-console.log('[Index] Content loaded:', !!content);
-if (content) {
-	console.log('[Index] Using Markdown content');
-	console.log('[Index] Hero from content:', content.hero);
-} else {
-	console.log('[Index] Using config.ts fallback');
 }
 
 // Merge content with config fallback
@@ -94,13 +80,6 @@ const config = {
 	footer: portfolioConfig.footer,
 };
 
-console.log('[Index] Final hero name:', config.hero.name);
-console.log('[Index] Final config.hero:', config.hero);
-console.log('[Index] About imageUrl:', config.about.imageUrl);
-console.log('[Index] About paragraphs:', config.about.paragraphs);
-console.log('[Index] About paragraphs length:', config.about.paragraphs?.length || 0);
-console.log('[Index] About showImage:', config.about.showImage);
-console.log('[Index] Content about object:', content?.about);
 ---
 
 <Layout>
@@ -243,14 +222,6 @@ console.log('[Index] Content about object:', content?.about);
 		scrollRoot.dataset.timelineUnits = String(timelineUnits);
 		scrollRoot.dataset.timelineExtraUnits = String(extraUnits);
 		scrollRoot.style.height = `${scrollDistance}px`;
-
-		console.log('[GSAP] Scroll height calculated', {
-			scrollDistance,
-			totalSegments,
-			timelineSegments,
-			timelineUnits,
-			extraUnits
-		});
 
 		return scrollDistance;
 	}
@@ -739,6 +710,18 @@ console.log('[Index] Content about object:', content?.about);
 		// Initialize Swiper
 		mobileSwiper = new Swiper('.scroll-stage.swiper', swiperConfig);
 
+		// ===== Z-INDEX OVERRIDE for cover effect =====
+		// CSS !important alone doesn't reliably override Swiper's inline z-index on all devices.
+		// This JS handler runs after Swiper's creative effect on every frame and sets
+		// index-based z-index (later slides always on top) using inline !important.
+		mobileSwiper.on('setTranslate', function() {
+			const slides = this.slides;
+			if (!slides) return;
+			for (let i = 0; i < slides.length; i++) {
+				slides[i].style.setProperty('z-index', String(i + 1), 'important');
+			}
+		});
+
 		// ===== FORCE slide children to match slide dimensions via JS =====
 		// CSS approaches (height:100%, max-height:100%, position:absolute) all fail
 		// because Swiper modifies the DOM (possibly adding transform wrappers)
@@ -748,67 +731,71 @@ console.log('[Index] Content about object:', content?.about);
 		// Slides that need internal scrolling - do NOT set overflow:hidden on these
 		const scrollableSlides = new Set(['mobile-timeline']);
 
-		function forceSlideChildrenHeight() {
-			const allSlides = document.querySelectorAll('.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide');
-			allSlides.forEach(slide => {
-				const slideRect = slide.getBoundingClientRect();
-				const slideH = slideRect.height;
-				const isScrollable = scrollableSlides.has(slide.id);
-				
-				// Scrollable slides (Timeline): leave completely untouched.
-				// They need content taller than the slide for internal scroll + ScrollTrigger.
-				if (isScrollable) {
-					console.log(`[ForceHeight] Slide #${slide.id}: ${slideH}px - SKIPPED (scrollable)`);
+		// Force a single slide's children to match its height.
+		// Prevents content overflow caused by Swiper's DOM manipulation.
+		function forceOneSlideHeight(slide) {
+			const slideRect = slide.getBoundingClientRect();
+			const slideH = slideRect.height;
+			const isScrollable = scrollableSlides.has(slide.id);
+
+			// Scrollable slides (Timeline): leave completely untouched.
+			// They need content taller than the slide for internal scroll + ScrollTrigger.
+			if (isScrollable) {
 					return;
-				}
-				
-				console.log(`[ForceHeight] Slide #${slide.id}: ${slideH}px`);
-				
-				// Walk ALL children (including Swiper-added wrappers)
-				for (const child of slide.children) {
-					const tag = child.tagName.toLowerCase();
-					const cls = child.className?.toString() || '';
-					
-					// Skip script tags
-					if (tag === 'script' || tag === 'style') continue;
-					
-					// Force the child to match slide height and clip overflow
-					child.style.setProperty('height', `${slideH}px`, 'important');
-					child.style.setProperty('max-height', `${slideH}px`, 'important');
-					child.style.setProperty('min-height', '0', 'important');
-					child.style.setProperty('overflow', 'hidden', 'important');
-					child.style.setProperty('box-sizing', 'border-box', 'important');
-					console.log(`[ForceHeight]   → child ${tag}.${cls.slice(0, 40)}: forced to ${slideH}px`);
-					
-					// If this is a Swiper transform wrapper, also force its children
-					if (cls.includes('swiper-slide-transform')) {
-						for (const grandchild of child.children) {
-							if (grandchild.tagName.toLowerCase() === 'script') continue;
-							grandchild.style.setProperty('height', `${slideH}px`, 'important');
-							grandchild.style.setProperty('max-height', `${slideH}px`, 'important');
-							grandchild.style.setProperty('min-height', '0', 'important');
-							grandchild.style.setProperty('overflow', 'hidden', 'important');
-							grandchild.style.setProperty('box-sizing', 'border-box', 'important');
-						}
+			}
+
+			// Walk ALL children (including Swiper-added wrappers)
+			for (const child of slide.children) {
+				const tag = child.tagName.toLowerCase();
+				const cls = child.className?.toString() || '';
+
+				// Skip script tags
+				if (tag === 'script' || tag === 'style') continue;
+
+				// Force the child to match slide height and clip overflow
+				child.style.setProperty('height', `${slideH}px`, 'important');
+				child.style.setProperty('max-height', `${slideH}px`, 'important');
+				child.style.setProperty('min-height', '0', 'important');
+				child.style.setProperty('overflow', 'hidden', 'important');
+				child.style.setProperty('box-sizing', 'border-box', 'important');
+
+				// If this is a Swiper transform wrapper, also force its children
+				if (cls.includes('swiper-slide-transform')) {
+					for (const grandchild of child.children) {
+						if (grandchild.tagName.toLowerCase() === 'script') continue;
+						grandchild.style.setProperty('height', `${slideH}px`, 'important');
+						grandchild.style.setProperty('max-height', `${slideH}px`, 'important');
+						grandchild.style.setProperty('min-height', '0', 'important');
+						grandchild.style.setProperty('overflow', 'hidden', 'important');
+						grandchild.style.setProperty('box-sizing', 'border-box', 'important');
 					}
 				}
-			});
+			}
+		}
+
+		// Full pass: force height on ALL slides (used for init and resize)
+		function forceAllSlidesHeight() {
+			const allSlides = document.querySelectorAll('.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide');
+			allSlides.forEach(slide => forceOneSlideHeight(slide));
 		}
 
 		// Run after Swiper init (give it time to set up DOM)
-		setTimeout(forceSlideChildrenHeight, 200);
+		setTimeout(forceAllSlidesHeight, 200);
 		// Run again after a longer delay (Swiper creative effect may modify DOM later)
-		setTimeout(forceSlideChildrenHeight, 600);
+		setTimeout(forceAllSlidesHeight, 600);
 		// Also run when viewport height changes
-		window.addEventListener('resize', () => setTimeout(forceSlideChildrenHeight, 100));
+		window.addEventListener('resize', () => setTimeout(forceAllSlidesHeight, 100));
 		if (window.visualViewport) {
-			window.visualViewport.addEventListener('resize', () => setTimeout(forceSlideChildrenHeight, 100));
+			window.visualViewport.addEventListener('resize', () => setTimeout(forceAllSlidesHeight, 100));
 		}
 
-		// Re-force heights on slide change (Swiper may recalculate)
+		// Re-force height on active slide AFTER transition completes (avoids layout thrashing mid-animation)
 		if (mobileSwiper) {
-			mobileSwiper.on('slideChange', () => {
-				setTimeout(forceSlideChildrenHeight, 100);
+			mobileSwiper.on('slideChangeTransitionEnd', function() {
+				const activeSlide = this.slides[this.activeIndex];
+				if (activeSlide) {
+					setTimeout(() => forceOneSlideHeight(activeSlide), 50);
+				}
 			});
 		}
 
@@ -871,18 +858,19 @@ console.log('[Index] Content about object:', content?.about);
 			speed: 350,
 			effect: 'creative',
 			creativeEffect: {
-				// Card reveal effect - simple 2D (no 3D transforms that break stacking)
+				// "Cover" effect: next slides up over current, prev fades out in place.
+				// prev.opacity: 0 means the leaving slide fades to transparent, revealing
+				// the incoming slide through it — creating the cover illusion.
 				prev: {
-					translate: [0, '-5%', 0],  // No Z translation - avoids 3D stacking issues
-					opacity: 0.9,
-					scale: 0.98,
+					translate: [0, 0, 0],   // Stay in place — covered by the incoming slide
+					opacity: 0,             // Fade out so incoming slide shows through
+					scale: 1,
 				},
 				next: {
-					translate: [0, '100%', 0],
+					translate: [0, '100%', 0],  // Start below viewport, slide up to cover
 					opacity: 1,
 					shadow: false,
 				},
-				// Use 2D transforms only
 				limitProgress: 2,
 			},
 			hashNavigation: {
@@ -907,7 +895,7 @@ console.log('[Index] Content about object:', content?.about);
 			mousewheel: {
 				enabled: false,
 			},
-			touchReleaseOnEdges: true,
+			touchReleaseOnEdges: false,  // Prevent browser taking over at edges (triggers pull-to-refresh)
 			threshold: 15,
 			touchAngle: 45,
 			longSwipesRatio: 0.4,
@@ -915,24 +903,35 @@ console.log('[Index] Content about object:', content?.about);
 			on: {
 				slideChange: function() {
 					const index = this.activeIndex;
+					const swiper = this;
 					console.log(`[Swiper] Slide changed to: ${index}`);
 					
-					// Dispatch section change event for navbar
-					window.dispatchEvent(new CustomEvent('sectionchange', {
-						detail: { index }
-					}));
+					// Debounce side-effects (navbar, nested swipers, pull-to-refresh)
+					// to prevent DOM thrashing during finger oscillation at section boundaries.
+					// Without this, rapid slideChange events cause layout recalculations
+					// mid-animation-frame which appear as visual flicker.
+					clearTimeout(swiper._slideChangeDebounce);
+					swiper._slideChangeDebounce = setTimeout(() => {
+						// Only process if user is still on this slide
+						if (swiper.activeIndex !== index) return;
+						
+						// Dispatch section change event for navbar
+						window.dispatchEvent(new CustomEvent('sectionchange', {
+							detail: { index }
+						}));
 
-					// Reset scroll position of slides with scrollable content
-					const currentSlide = this.slides[index];
-					if (currentSlide && currentSlide.dataset.hasScroll === 'true') {
-						currentSlide.scrollTop = 0;
-					}
+						// Reset scroll position of slides with scrollable content
+						const currentSlide = swiper.slides[index];
+						if (currentSlide && currentSlide.dataset.hasScroll === 'true') {
+							currentSlide.scrollTop = 0;
+						}
 
-					// Update nested Swipers when slide becomes visible
-					updateNestedSwipersOnSlide(currentSlide);
-					
-					// Update pull-to-refresh behavior based on slide
-					updatePullToRefreshForSlide(index);
+						// Update nested Swipers when slide becomes visible
+						updateNestedSwipersOnSlide(currentSlide);
+						
+						// Update pull-to-refresh behavior based on slide
+						updatePullToRefreshForSlide(index);
+					}, 100);
 				},
 				init: function() {
 					// Dispatch initial section
@@ -1030,12 +1029,13 @@ console.log('[Index] Content about object:', content?.about);
 			if (pullDistance > 0) {
 				updatePullIndicator(pullDistance);
 				
-				// Prevent Swiper from taking over when pulling down on home
+				// Prevent native pull-to-refresh AND Swiper from taking over
 				if (pullDistance > 20) {
+					e.preventDefault();
 					swiper.allowTouchMove = false;
 				}
 			}
-		}, { passive: true });
+		}, { passive: false });
 		
 		homeSlide.addEventListener('touchend', () => {
 			if (!pullToRefreshEnabled) return;
@@ -1160,7 +1160,6 @@ console.log('[Index] Content about object:', content?.about);
 		const nestedContainers = slide.querySelectorAll('.swiper');
 		nestedContainers.forEach(container => {
 			if (container.swiper) {
-				console.log('[Swiper] Updating nested swiper on slide change');
 				container.swiper.update();
 			}
 		});
@@ -1182,11 +1181,7 @@ console.log('[Index] Content about object:', content?.about);
 				// Pagination is now a sibling of the carousel, in .skills-panels-mobile
 				const skillsWrapper = skillsCarousel.closest('.skills-panels-mobile');
 				const skillsPaginationEl = skillsWrapper?.querySelector('.skills-pagination');
-				console.log('[Swiper] Initializing Skills carousel...', skillsCarousel);
-				console.log('[Swiper] Skills pagination element found:', !!skillsPaginationEl);
 				
-				console.log('[Swiper] Skills carousel dimensions:', skillsCarousel.offsetWidth, 'x', skillsCarousel.offsetHeight);
-				console.log('[Swiper] Skills slides found:', skillsCarousel.querySelectorAll('.swiper-slide').length);
 				
 				const skillsSwiper = new Swiper(skillsCarousel, {
 					modules: [Pagination],
@@ -1216,16 +1211,8 @@ console.log('[Index] Content about object:', content?.about);
 					observeSlideChildren: true,
 					on: {
 						init: function() {
-							console.log('[Swiper] Skills carousel initialized, slides:', this.slides.length);
-							console.log('[Swiper] Skills carousel container size:', this.width, 'x', this.height);
 							// Force update after a short delay to ensure dimensions are correct
-							setTimeout(() => {
-								this.update();
-								console.log('[Swiper] Skills carousel updated, width:', this.width, 'slides:', this.slides.length);
-							}, 100);
-						},
-						slideChange: function() {
-							console.log('[Swiper] Skills slide changed to:', this.activeIndex);
+							setTimeout(() => this.update(), 100);
 						}
 					}
 				});
@@ -1233,7 +1220,7 @@ console.log('[Index] Content about object:', content?.about);
 				skillsCarousel.swiper = skillsSwiper;
 				nestedSwipers.push(skillsSwiper);
 			} else {
-				console.log('[Swiper] Skills carousel element not found!');
+				console.warn('[Swiper] Skills carousel element not found');
 			}
 
 			// Initialize Projects carousels (one for each category tab)
@@ -1244,8 +1231,6 @@ console.log('[Index] Content about object:', content?.about);
 				const panelMobile = carousel.closest('.project-panel-mobile');
 				const paginationEl = panelMobile?.querySelector(`[data-projects-pagination="${categoryId}"]`);
 				
-				console.log(`[Swiper] Initializing Projects carousel (${categoryId})...`);
-				console.log(`[Swiper] Projects pagination element (${categoryId}) found:`, !!paginationEl);
 				const projectsSwiper = new Swiper(carousel, {
 					modules: [Pagination],
 					direction: 'horizontal',
@@ -1272,11 +1257,6 @@ console.log('[Index] Content about object:', content?.about);
 					observer: true,
 					observeParents: true,
 					observeSlideChildren: true,
-					on: {
-						init: function() {
-							console.log(`[Swiper] Projects carousel (${categoryId}) initialized, slides:`, this.slides.length);
-						}
-					}
 				});
 				
 				// Store reference on the element for tab switching updates
@@ -1284,7 +1264,6 @@ console.log('[Index] Content about object:', content?.about);
 				nestedSwipers.push(projectsSwiper);
 			});
 
-			console.log(`[Swiper] Initialized ${nestedSwipers.length} nested horizontal carousels`);
 		} catch (error) {
 			console.error('[Swiper] Error initializing nested carousels:', error);
 		}
@@ -1302,7 +1281,6 @@ console.log('[Index] Content about object:', content?.about);
 			const scrollContainer = slide;
 			let touchStartY = 0;
 			
-			console.log(`[Swiper] Setting up nested scroll for: ${slideId}`);
 
 			function getScrollState() {
 				const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
@@ -1390,11 +1368,9 @@ console.log('[Index] Content about object:', content?.about);
 		if (mobileMode) {
 			desktop.style.setProperty('display', 'none', 'important');
 			mobile.style.setProperty('display', 'flex', 'important');
-			console.log('[Timeline] Showing mobile timeline');
 		} else {
 			mobile.style.setProperty('display', 'none', 'important');
 			desktop.style.setProperty('display', 'flex', 'important');
-			console.log('[Timeline] Showing desktop timeline');
 		}
 	}
 
@@ -2085,7 +2061,7 @@ console.log('[Index] Content about object:', content?.about);
 			backface-visibility: hidden;
 			-webkit-backface-visibility: hidden;
 			transform: translateZ(0);
-			will-change: transform;
+			/* will-change moved to active/adjacent slides only to reduce GPU compositing load */
 		}
 
 		/* Hide inactive main slides to prevent content from bleeding through during transitions */
@@ -2093,16 +2069,27 @@ console.log('[Index] Content about object:', content?.about);
 			visibility: hidden;
 		}
 
-		/* Ensure active main slide and adjacent slides are visible but properly layered */
-		/* For card-reveal effect: next slide (coming from below) must be ON TOP */
+		/* Index-based z-index for card-stacking cover effect.
+		   Uses nth-child so z-index is permanently fixed by DOM position — no JS needed.
+		   !important overrides Swiper's inline z-index that it sets on every frame.
+		   Later slides always stack on top of earlier ones (natural card order). */
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide:nth-child(1) { z-index: 1 !important; }
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide:nth-child(2) { z-index: 2 !important; }
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide:nth-child(3) { z-index: 3 !important; }
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide:nth-child(4) { z-index: 4 !important; }
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide:nth-child(5) { z-index: 5 !important; }
+		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide:nth-child(6) { z-index: 6 !important; }
+
+		/* will-change on active/adjacent slides to reduce GPU compositing load.
+		   Includes opacity because the creative effect animates prev slide opacity. */
 		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide-active {
-			z-index: 2;
+			will-change: transform, opacity;
 		}
 		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide-next {
-			z-index: 3; /* Highest - incoming slide appears on top */
+			will-change: transform, opacity;
 		}
 		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide-prev {
-			z-index: 1;
+			will-change: transform, opacity;
 		}
 
 		/* Non-scrollable slides should clip overflow */
@@ -2450,18 +2437,18 @@ console.log('[Index] Content about object:', content?.about);
 			flex-direction: column;
 		}
 
-		/* Swiper creative effect shadow styling - reduce for cleaner look */
+		/* Swiper creative effect shadow styling - provides visual separation between slides */
 		.mobile-swiper-active .swiper-slide-shadow-left,
 		.mobile-swiper-active .swiper-slide-shadow-right,
 		.mobile-swiper-active .swiper-slide-shadow {
-			background: rgba(0, 0, 0, 0.05) !important;
-			opacity: 0.5;
+			background: rgba(0, 0, 0, 0.15) !important;
+			opacity: 1;
 		}
 
 		html.dark .mobile-swiper-active .swiper-slide-shadow-left,
 		html.dark .mobile-swiper-active .swiper-slide-shadow-right,
 		html.dark .mobile-swiper-active .swiper-slide-shadow {
-			background: rgba(0, 0, 0, 0.15) !important;
+			background: rgba(0, 0, 0, 0.3) !important;
 		}
 
 		/* Hide scrollbar for cleaner look on main slides */
