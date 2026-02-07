@@ -650,58 +650,22 @@ console.log('[Index] Content about object:', content?.about);
 	// MOBILE SWIPER EXPERIENCE
 	// ============================================
 	
-	// Get scroll mode from URL param (A, B, or C) - default to B (edge-release)
-	function getMobileScrollMode() {
-		const urlParams = new URLSearchParams(window.location.search);
-		const mode = urlParams.get('scrollMode')?.toUpperCase();
-		if (mode === 'A' || mode === 'B' || mode === 'C') {
-			return mode;
-		}
-		return 'B'; // Default: edge-release
-	}
-
 	// Store Swiper instance globally for cleanup
 	let mobileSwiper = null;
-	let mobileScrollMode = getMobileScrollMode();
 
 	function initMobileSwiperExperience(sections, scrollRoot) {
-		console.log(`[Swiper] Mobile detected - initializing Swiper (mode: ${mobileScrollMode})`);
+		console.log('[Swiper] Mobile detected - initializing Swiper');
 
-		// Set dynamic viewport height (accounts for mobile browser bar)
+		// Set dynamic viewport height (accounts for mobile browser bar).
+		// Uses visualViewport API as primary source (most accurate on mobile),
+		// falls back to window.innerHeight. Sets --app-height CSS variable
+		// which all mobile Swiper CSS references instead of 100dvh/100vh.
 		function setViewportHeight() {
-			const vh = window.innerHeight * 0.01;
-			const innerH = window.innerHeight;
-			const visualH = window.visualViewport ? window.visualViewport.height : null;
+			const realHeight = window.visualViewport?.height || window.innerHeight;
+			const vh = realHeight * 0.01;
 			document.documentElement.style.setProperty('--vh', `${vh}px`);
-			
-			// Update heights on all relevant containers
-			const heightValue = `${innerH}px`;
-			if (scrollRoot) {
-				scrollRoot.style.height = heightValue;
-				scrollRoot.style.maxHeight = heightValue;
-			}
-			const mainContent = document.querySelector('.main-content, #main-content');
-			if (mainContent) {
-				mainContent.style.height = heightValue;
-				mainContent.style.maxHeight = heightValue;
-			}
-			const scrollStage = document.querySelector('.scroll-stage');
-			if (scrollStage) {
-				scrollStage.style.height = heightValue;
-				scrollStage.style.maxHeight = heightValue;
-			}
-			const swiperWrapper = document.querySelector('.swiper-wrapper');
-			if (swiperWrapper) {
-				swiperWrapper.style.height = heightValue;
-				swiperWrapper.style.maxHeight = heightValue;
-			}
-			// Also set on all slides
-			const slides = document.querySelectorAll('.swiper-slide');
-			slides.forEach(slide => {
-				slide.style.height = heightValue;
-				slide.style.maxHeight = heightValue;
-			});
-			
+			document.documentElement.style.setProperty('--app-height', `${realHeight}px`);
+			console.log(`[Viewport] --app-height set to ${realHeight}px (visualViewport: ${window.visualViewport?.height}, innerHeight: ${window.innerHeight})`);
 		}
 		setViewportHeight();
 		window.addEventListener('resize', setViewportHeight);
@@ -710,6 +674,7 @@ console.log('[Index] Content about object:', content?.about);
 		if (window.visualViewport) {
 			window.visualViewport.addEventListener('resize', setViewportHeight);
 		}
+
 
 		// Clean up any existing Swiper instance
 		if (mobileSwiper) {
@@ -729,8 +694,8 @@ console.log('[Index] Content about object:', content?.about);
 		document.documentElement.classList.add('mobile-swiper-active-html');
 		document.body.classList.add('mobile-swiper-active-body');
 
-		// Set up the DOM structure for Swiper - use actual innerHeight for accuracy
-		scrollRoot.style.height = `${window.innerHeight}px`;
+		// Set up the DOM structure for Swiper
+		// Height is controlled via CSS var(--app-height) set by setViewportHeight()
 		scrollRoot.classList.add('mobile-swiper-active');
 
 		// Add swiper classes to existing structure
@@ -773,6 +738,79 @@ console.log('[Index] Content about object:', content?.about);
 		
 		// Initialize Swiper
 		mobileSwiper = new Swiper('.scroll-stage.swiper', swiperConfig);
+
+		// ===== FORCE slide children to match slide dimensions via JS =====
+		// CSS approaches (height:100%, max-height:100%, position:absolute) all fail
+		// because Swiper modifies the DOM (possibly adding transform wrappers)
+		// and flex-in-flex percentage calculations are unreliable across browsers.
+		// JS with setProperty('...', value, 'important') is the nuclear option that
+		// nothing can override.
+		// Slides that need internal scrolling - do NOT set overflow:hidden on these
+		const scrollableSlides = new Set(['mobile-timeline']);
+
+		function forceSlideChildrenHeight() {
+			const allSlides = document.querySelectorAll('.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide');
+			allSlides.forEach(slide => {
+				const slideRect = slide.getBoundingClientRect();
+				const slideH = slideRect.height;
+				const isScrollable = scrollableSlides.has(slide.id);
+				
+				// Scrollable slides (Timeline): leave completely untouched.
+				// They need content taller than the slide for internal scroll + ScrollTrigger.
+				if (isScrollable) {
+					console.log(`[ForceHeight] Slide #${slide.id}: ${slideH}px - SKIPPED (scrollable)`);
+					return;
+				}
+				
+				console.log(`[ForceHeight] Slide #${slide.id}: ${slideH}px`);
+				
+				// Walk ALL children (including Swiper-added wrappers)
+				for (const child of slide.children) {
+					const tag = child.tagName.toLowerCase();
+					const cls = child.className?.toString() || '';
+					
+					// Skip script tags
+					if (tag === 'script' || tag === 'style') continue;
+					
+					// Force the child to match slide height and clip overflow
+					child.style.setProperty('height', `${slideH}px`, 'important');
+					child.style.setProperty('max-height', `${slideH}px`, 'important');
+					child.style.setProperty('min-height', '0', 'important');
+					child.style.setProperty('overflow', 'hidden', 'important');
+					child.style.setProperty('box-sizing', 'border-box', 'important');
+					console.log(`[ForceHeight]   → child ${tag}.${cls.slice(0, 40)}: forced to ${slideH}px`);
+					
+					// If this is a Swiper transform wrapper, also force its children
+					if (cls.includes('swiper-slide-transform')) {
+						for (const grandchild of child.children) {
+							if (grandchild.tagName.toLowerCase() === 'script') continue;
+							grandchild.style.setProperty('height', `${slideH}px`, 'important');
+							grandchild.style.setProperty('max-height', `${slideH}px`, 'important');
+							grandchild.style.setProperty('min-height', '0', 'important');
+							grandchild.style.setProperty('overflow', 'hidden', 'important');
+							grandchild.style.setProperty('box-sizing', 'border-box', 'important');
+						}
+					}
+				}
+			});
+		}
+
+		// Run after Swiper init (give it time to set up DOM)
+		setTimeout(forceSlideChildrenHeight, 200);
+		// Run again after a longer delay (Swiper creative effect may modify DOM later)
+		setTimeout(forceSlideChildrenHeight, 600);
+		// Also run when viewport height changes
+		window.addEventListener('resize', () => setTimeout(forceSlideChildrenHeight, 100));
+		if (window.visualViewport) {
+			window.visualViewport.addEventListener('resize', () => setTimeout(forceSlideChildrenHeight, 100));
+		}
+
+		// Re-force heights on slide change (Swiper may recalculate)
+		if (mobileSwiper) {
+			mobileSwiper.on('slideChange', () => {
+				setTimeout(forceSlideChildrenHeight, 100);
+			});
+		}
 
 		// Force overflow-y on scrollable slides via JavaScript (only timeline now)
 		const scrollableSlideIds = ['mobile-timeline'];
@@ -818,12 +856,15 @@ console.log('[Index] Content about object:', content?.about);
 
 		// Set up nested scroll handling for slides with overflow
 		initNestedScrollHandling(mobileSwiper, sections);
+		
+		// Set up custom pull-to-refresh for home page
+		initPullToRefresh(mobileSwiper);
 
 		console.log('[Swiper] Mobile Swiper initialized successfully');
 	}
 
 	function getSwiperConfig() {
-		const baseConfig = {
+		return {
 			modules: [EffectCreative, Mousewheel, HashNavigation],
 			direction: 'vertical',
 			slidesPerView: 1,
@@ -862,6 +903,15 @@ console.log('[Index] Content about object:', content?.about);
 			simulateTouch: true,
 			allowTouchMove: true,
 			followFinger: true,
+			// Swipe settings (edge-release behavior)
+			mousewheel: {
+				enabled: false,
+			},
+			touchReleaseOnEdges: true,
+			threshold: 15,
+			touchAngle: 45,
+			longSwipesRatio: 0.4,
+			longSwipesMs: 250,
 			on: {
 				slideChange: function() {
 					const index = this.activeIndex;
@@ -880,12 +930,17 @@ console.log('[Index] Content about object:', content?.about);
 
 					// Update nested Swipers when slide becomes visible
 					updateNestedSwipersOnSlide(currentSlide);
+					
+					// Update pull-to-refresh behavior based on slide
+					updatePullToRefreshForSlide(index);
 				},
 				init: function() {
 					// Dispatch initial section
 					window.dispatchEvent(new CustomEvent('sectionchange', {
 						detail: { index: 0 }
 					}));
+					// Enable pull-to-refresh on home (slide 0)
+					updatePullToRefreshForSlide(0);
 				},
 				touchStart: function(swiper, event) {
 					// Store touch start position for nested scroll detection
@@ -896,52 +951,107 @@ console.log('[Index] Content about object:', content?.about);
 				}
 			}
 		};
-
-		// Apply scroll mode specific settings
-		switch (mobileScrollMode) {
-			case 'A': // Scroll-then-swipe - must scroll all content before changing slide
-				return {
-					...baseConfig,
-					mousewheel: {
-						enabled: false, // Disable mousewheel in favor of touch
-					},
-					touchReleaseOnEdges: false,
-					threshold: 20,
-					touchAngle: 45,
-					longSwipesRatio: 0.5,
-					longSwipesMs: 300,
-				};
-			
-			case 'B': // Edge-release (default) - scroll content, release at edges
-				return {
-					...baseConfig,
-					mousewheel: {
-						enabled: false,
-					},
-					touchReleaseOnEdges: true,
-					threshold: 15,
-					touchAngle: 45,
-					longSwipesRatio: 0.4,
-					longSwipesMs: 250,
-				};
-			
-			case 'C': // Gesture differentiation - fast swipe = slide change
-				return {
-					...baseConfig,
-					mousewheel: {
-						enabled: false,
-					},
-					touchReleaseOnEdges: true,
-					threshold: 10,
-					touchAngle: 30,
-					longSwipesRatio: 0.25,
-					longSwipesMs: 150,
-					shortSwipes: true,
-				};
-			
-			default:
-				return baseConfig;
+	}
+	
+	// Custom pull-to-refresh for home page
+	// Native pull-to-refresh doesn't work with position:fixed, so we implement our own
+	let pullToRefreshEnabled = false;
+	let pullStartY = 0;
+	let pullDistance = 0;
+	const PULL_THRESHOLD = 120; // Distance to trigger reload
+	let pullIndicator = null;
+	
+	function createPullIndicator() {
+		if (pullIndicator) return pullIndicator;
+		
+		pullIndicator = document.createElement('div');
+		pullIndicator.className = 'pull-to-refresh-indicator';
+		pullIndicator.innerHTML = `
+			<div class="pull-arrow">↓</div>
+			<div class="pull-text">Pull to refresh</div>
+		`;
+		document.body.appendChild(pullIndicator);
+		return pullIndicator;
+	}
+	
+	function updatePullIndicator(distance) {
+		if (!pullIndicator) return;
+		
+		const progress = Math.min(distance / PULL_THRESHOLD, 1);
+		pullIndicator.style.opacity = progress;
+		pullIndicator.style.transform = `translateX(-50%) translateY(${Math.min(distance * 0.5, 60)}px)`;
+		
+		if (progress >= 1) {
+			pullIndicator.querySelector('.pull-text').textContent = 'Release to refresh';
+			pullIndicator.querySelector('.pull-arrow').style.transform = 'rotate(180deg)';
+		} else {
+			pullIndicator.querySelector('.pull-text').textContent = 'Pull to refresh';
+			pullIndicator.querySelector('.pull-arrow').style.transform = 'rotate(0deg)';
 		}
+	}
+	
+	function hidePullIndicator() {
+		if (!pullIndicator) return;
+		pullIndicator.style.opacity = '0';
+		pullIndicator.style.transform = 'translateX(-50%) translateY(0)';
+	}
+	
+	function updatePullToRefreshForSlide(index) {
+		pullToRefreshEnabled = (index === 0);
+		
+		if (pullToRefreshEnabled) {
+			createPullIndicator();
+		} else {
+			hidePullIndicator();
+		}
+	}
+	
+	// Set up pull-to-refresh touch handlers on the home slide
+	function initPullToRefresh(swiper) {
+		const homeSlide = document.getElementById('home');
+		if (!homeSlide) return;
+		
+		homeSlide.addEventListener('touchstart', (e) => {
+			if (!pullToRefreshEnabled) return;
+			if (swiper.activeIndex !== 0) return;
+			
+			pullStartY = e.touches[0].clientY;
+			pullDistance = 0;
+		}, { passive: true });
+		
+		homeSlide.addEventListener('touchmove', (e) => {
+			if (!pullToRefreshEnabled) return;
+			if (swiper.activeIndex !== 0) return;
+			
+			const currentY = e.touches[0].clientY;
+			pullDistance = currentY - pullStartY;
+			
+			// Only activate for downward pull (positive distance)
+			if (pullDistance > 0) {
+				updatePullIndicator(pullDistance);
+				
+				// Prevent Swiper from taking over when pulling down on home
+				if (pullDistance > 20) {
+					swiper.allowTouchMove = false;
+				}
+			}
+		}, { passive: true });
+		
+		homeSlide.addEventListener('touchend', () => {
+			if (!pullToRefreshEnabled) return;
+			
+			if (pullDistance >= PULL_THRESHOLD) {
+				// Trigger reload
+				hidePullIndicator();
+				window.location.reload();
+			} else {
+				hidePullIndicator();
+			}
+			
+			pullDistance = 0;
+			// Re-enable swiper
+			swiper.allowTouchMove = true;
+		}, { passive: true });
 	}
 
 	function initMobileSwiperBackgroundFade(swiper) {
@@ -1181,210 +1291,71 @@ console.log('[Index] Content about object:', content?.about);
 	}
 
 	function initNestedScrollHandling(swiper, sections) {
-		// For slides with overflowing content, we need special handling
-		// The slide itself is the scroll container (it has overflow-y: auto)
+		// For slides with scrollable content (only mobile-timeline now that all pages are full-screen)
+		// Edge-release behavior: scroll content freely, release to swiper at edges
 		const slidesWithScroll = ['mobile-timeline'];
 		
 		slidesWithScroll.forEach(slideId => {
 			const slide = document.getElementById(slideId);
 			if (!slide) return;
 
-			// The slide itself is the scrollable container
 			const scrollContainer = slide;
+			let touchStartY = 0;
 			
 			console.log(`[Swiper] Setting up nested scroll for: ${slideId}`);
-			
-			// Handle scroll mode specific behavior
-			if (mobileScrollMode === 'A') {
-				initScrollThenSwipe(swiper, slide, scrollContainer);
-			} else if (mobileScrollMode === 'B') {
-				initEdgeRelease(swiper, slide, scrollContainer);
-			} else if (mobileScrollMode === 'C') {
-				initGestureDifferentiation(swiper, slide, scrollContainer);
+
+			function getScrollState() {
+				const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+				const isAtTop = scrollTop <= 2;
+				const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
+				const hasScrollableContent = scrollHeight > clientHeight + 10;
+				return { isAtTop, isAtBottom, hasScrollableContent };
 			}
+
+			slide.addEventListener('touchstart', (e) => {
+				touchStartY = e.touches[0].clientY;
+				const state = getScrollState();
+				
+				// If no scrollable content, always allow swiper
+				if (!state.hasScrollableContent) {
+					swiper.allowTouchMove = true;
+					return;
+				}
+				
+				// Start with swiper disabled for scrollable slides
+				swiper.allowTouchMove = false;
+			}, { passive: true });
+
+			slide.addEventListener('touchmove', (e) => {
+				const touchY = e.touches[0].clientY;
+				const deltaY = touchStartY - touchY; // positive = scrolling down
+				
+				const { isAtTop, isAtBottom, hasScrollableContent } = getScrollState();
+				
+				if (!hasScrollableContent) {
+					swiper.allowTouchMove = true;
+					return;
+				}
+				
+				// At top and trying to go to previous slide (swipe down / deltaY < 0)
+				if (isAtTop && deltaY < -10) {
+					swiper.allowTouchMove = true;
+				}
+				// At bottom and trying to go to next slide (swipe up / deltaY > 0)
+				else if (isAtBottom && deltaY > 10) {
+					swiper.allowTouchMove = true;
+				}
+				else {
+					swiper.allowTouchMove = false;
+				}
+			}, { passive: true });
+
+			slide.addEventListener('touchend', () => {
+				setTimeout(() => {
+					swiper.allowTouchMove = true;
+				}, 100);
+			}, { passive: true });
 		});
-	}
-
-	function initScrollThenSwipe(swiper, slide, scrollContainer) {
-		// Mode A: User must scroll through ALL content before slide changes
-		let touchStartY = 0;
-		let touchDirection = 0; // -1 = up, 1 = down
-
-		function getScrollState() {
-			const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-			const isAtTop = scrollTop <= 2;
-			const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
-			const hasScrollableContent = scrollHeight > clientHeight + 10;
-			return { isAtTop, isAtBottom, hasScrollableContent };
-		}
-
-		slide.addEventListener('touchstart', (e) => {
-			touchStartY = e.touches[0].clientY;
-			const { isAtTop, isAtBottom, hasScrollableContent } = getScrollState();
-			
-			// If no scrollable content, always allow swiper
-			if (!hasScrollableContent) {
-				swiper.allowTouchMove = true;
-				return;
-			}
-			
-			// Start with swiper disabled for scrollable slides
-			swiper.allowTouchMove = false;
-		}, { passive: true });
-
-		slide.addEventListener('touchmove', (e) => {
-			const touchY = e.touches[0].clientY;
-			const deltaY = touchStartY - touchY;
-			touchDirection = deltaY > 0 ? 1 : -1; // 1 = scrolling down, -1 = scrolling up
-			
-			const { isAtTop, isAtBottom, hasScrollableContent } = getScrollState();
-			
-			if (!hasScrollableContent) {
-				swiper.allowTouchMove = true;
-				return;
-			}
-			
-			// Only allow swiper at the correct edge based on direction
-			if (touchDirection > 0 && isAtBottom) {
-				swiper.allowTouchMove = true;
-			} else if (touchDirection < 0 && isAtTop) {
-				swiper.allowTouchMove = true;
-			} else {
-				swiper.allowTouchMove = false;
-			}
-		}, { passive: true });
-
-		slide.addEventListener('touchend', () => {
-			// Always re-enable after touch ends for other slides
-			setTimeout(() => {
-				swiper.allowTouchMove = true;
-			}, 100);
-		}, { passive: true });
-	}
-
-	function initEdgeRelease(swiper, slide, scrollContainer) {
-		// Mode B: Scroll content freely, release to swiper at edges
-		let touchStartY = 0;
-		let initialScrollTop = 0;
-		const slideId = slide.id;
-
-		function getScrollState() {
-			const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-			const isAtTop = scrollTop <= 2;
-			const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
-			const hasScrollableContent = scrollHeight > clientHeight + 10;
-			return { isAtTop, isAtBottom, hasScrollableContent, scrollTop, scrollHeight, clientHeight };
-		}
-
-		slide.addEventListener('touchstart', (e) => {
-			touchStartY = e.touches[0].clientY;
-			const state = getScrollState();
-			initialScrollTop = state.scrollTop;
-			
-			// If no scrollable content, always allow swiper
-			if (!state.hasScrollableContent) {
-				swiper.allowTouchMove = true;
-				return;
-			}
-			
-			// If at edge already, allow swiper for the correct direction
-			// But we'll refine this in touchmove
-			swiper.allowTouchMove = false;
-		}, { passive: true });
-
-		slide.addEventListener('touchmove', (e) => {
-			const touchY = e.touches[0].clientY;
-			const deltaY = touchStartY - touchY; // positive = scrolling down
-			
-			const { isAtTop, isAtBottom, hasScrollableContent } = getScrollState();
-			
-			if (!hasScrollableContent) {
-				swiper.allowTouchMove = true;
-				return;
-			}
-			
-			let newAllowTouchMove = swiper.allowTouchMove;
-			// At top and trying to go to previous slide (swipe down / deltaY < 0)
-			if (isAtTop && deltaY < -10) {
-				newAllowTouchMove = true;
-			}
-			// At bottom and trying to go to next slide (swipe up / deltaY > 0)
-			else if (isAtBottom && deltaY > 10) {
-				newAllowTouchMove = true;
-			}
-			else {
-				newAllowTouchMove = false;
-			}
-			
-			swiper.allowTouchMove = newAllowTouchMove;
-		}, { passive: true });
-
-		slide.addEventListener('touchend', () => {
-			setTimeout(() => {
-				swiper.allowTouchMove = true;
-			}, 100);
-		}, { passive: true });
-	}
-
-	function initGestureDifferentiation(swiper, slide, scrollContainer) {
-		// Mode C: Fast swipes change slides regardless of scroll position
-		let touchStartY = 0;
-		let touchStartTime = 0;
-		const VELOCITY_THRESHOLD = 0.6; // pixels per millisecond
-		const MIN_DISTANCE = 40; // minimum swipe distance
-
-		function getScrollState() {
-			const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-			const isAtTop = scrollTop <= 2;
-			const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
-			const hasScrollableContent = scrollHeight > clientHeight + 10;
-			return { isAtTop, isAtBottom, hasScrollableContent };
-		}
-
-		slide.addEventListener('touchstart', (e) => {
-			touchStartY = e.touches[0].clientY;
-			touchStartTime = Date.now();
-			
-			const { hasScrollableContent } = getScrollState();
-			if (!hasScrollableContent) {
-				swiper.allowTouchMove = true;
-			} else {
-				// Start with disabled, will enable based on velocity
-				swiper.allowTouchMove = false;
-			}
-		}, { passive: true });
-
-		slide.addEventListener('touchmove', (e) => {
-			const touchY = e.touches[0].clientY;
-			const deltaY = touchStartY - touchY;
-			const elapsed = Date.now() - touchStartTime;
-			const velocity = Math.abs(deltaY) / Math.max(elapsed, 1);
-			
-			const { isAtTop, isAtBottom, hasScrollableContent } = getScrollState();
-			
-			if (!hasScrollableContent) {
-				swiper.allowTouchMove = true;
-				return;
-			}
-			
-			// Fast movement = slide change
-			if (velocity >= VELOCITY_THRESHOLD && Math.abs(deltaY) > MIN_DISTANCE) {
-				swiper.allowTouchMove = true;
-			}
-			// At edges, allow slide change
-			else if ((isAtTop && deltaY < -5) || (isAtBottom && deltaY > 5)) {
-				swiper.allowTouchMove = true;
-			}
-			else {
-				swiper.allowTouchMove = false;
-			}
-		}, { passive: true });
-
-		slide.addEventListener('touchend', () => {
-			setTimeout(() => {
-				swiper.allowTouchMove = true;
-			}, 100);
-		}, { passive: true });
 	}
 
 	// Legacy function for non-Swiper mobile (kept for reference but not used)
@@ -1431,10 +1402,13 @@ console.log('[Index] Content about object:', content?.about);
 	// VIEWPORT HEIGHT HANDLING
 	// ============================================
 	function initViewportHeight() {
-		// Set --vh CSS variable for consistent viewport height on mobile
+		// Set --vh and --app-height CSS variables for consistent viewport height on mobile.
+		// Uses visualViewport API when available for best accuracy.
 		function setVH() {
-			const vh = window.innerHeight * 0.01;
+			const realHeight = window.visualViewport?.height || window.innerHeight;
+			const vh = realHeight * 0.01;
 			document.documentElement.style.setProperty('--vh', `${vh}px`);
+			document.documentElement.style.setProperty('--app-height', `${realHeight}px`);
 		}
 
 		setVH();
@@ -1445,6 +1419,10 @@ console.log('[Index] Content about object:', content?.about);
 			// Delay to allow browser to settle
 			setTimeout(setVH, 100);
 		});
+		// visualViewport resize fires when browser chrome (address bar) changes
+		if (window.visualViewport) {
+			window.visualViewport.addEventListener('resize', setVH);
+		}
 	}
 
 	// ============================================
@@ -2018,9 +1996,13 @@ console.log('[Index] Content about object:', content?.about);
 	   TikTok/Reels-style vertical swiping with card-reveal effect
 	   ============================================ */
 	
-	/* Dynamic viewport height CSS variable fallback */
+	/* Dynamic viewport height CSS variable fallback.
+	   --app-height is the single source of truth, set by JS using
+	   visualViewport.height || window.innerHeight. Falls back to 100vh
+	   before JS runs. */
 	:root {
 		--vh: 1vh;
+		--app-height: 100vh;
 	}
 	
 	@media (max-width: 1024px) {
@@ -2034,20 +2016,15 @@ console.log('[Index] Content about object:', content?.about);
 			overflow: hidden;
 			position: fixed;
 			width: 100%;
-			height: 100dvh; /* Dynamic viewport height */
-			height: -webkit-fill-available; /* Safari fallback */
-			/* Use JS-calculated height as fallback */
-			height: calc(var(--vh, 1vh) * 100);
+			/* Use JS-calculated --app-height as single source of truth */
+			height: var(--app-height);
 		}
 
 		/* Constrain main-content wrapper from Layout.astro */
 		body.mobile-swiper-active-body .main-content,
 		body.mobile-swiper-active-body #main-content {
-			height: 100dvh;
-			height: -webkit-fill-available;
-			height: calc(var(--vh, 1vh) * 100);
-			max-height: 100dvh;
-			max-height: -webkit-fill-available;
+			height: var(--app-height);
+			max-height: var(--app-height);
 			overflow: hidden;
 			position: fixed;
 			top: 0;
@@ -2058,11 +2035,8 @@ console.log('[Index] Content about object:', content?.about);
 
 		/* When Swiper is active */
 		#scroll-root.mobile-swiper-active {
-			height: 100dvh;
-			height: -webkit-fill-available;
-			height: calc(var(--vh, 1vh) * 100);
-			max-height: 100dvh;
-			max-height: -webkit-fill-available;
+			height: var(--app-height);
+			max-height: var(--app-height);
 			overflow: hidden;
 			position: fixed;
 			top: 0;
@@ -2076,10 +2050,8 @@ console.log('[Index] Content about object:', content?.about);
 		}
 
 		.mobile-swiper-active .scroll-stage {
-			height: 100dvh !important;
-			height: -webkit-fill-available !important;
-			max-height: 100dvh !important;
-			max-height: -webkit-fill-available !important;
+			height: var(--app-height) !important;
+			max-height: var(--app-height) !important;
 			overflow: hidden;
 			/* Create stacking context for proper z-index */
 			isolation: isolate;
@@ -2087,29 +2059,25 @@ console.log('[Index] Content about object:', content?.about);
 		
 		.mobile-swiper-active .scroll-stage.swiper {
 			width: 100%;
-			height: 100dvh !important;
-			height: -webkit-fill-available !important;
-			max-height: 100dvh !important;
-			max-height: -webkit-fill-available !important;
+			height: var(--app-height) !important;
+			max-height: var(--app-height) !important;
 			/* Prevent overscroll bounce */
 			overscroll-behavior: contain;
 		}
 
 		/* Main Swiper wrapper - NOT nested carousels */
 		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper {
-			height: 100dvh !important;
-			height: -webkit-fill-available !important;
-			max-height: 100dvh !important;
-			max-height: -webkit-fill-available !important;
+			height: var(--app-height) !important;
+			max-height: var(--app-height) !important;
 		}
 
 		/* Main Swiper slides - NOT nested carousel slides */
 		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide {
-			height: 100dvh !important;
-			height: -webkit-fill-available !important;
-			max-height: 100dvh !important;
-			max-height: -webkit-fill-available !important;
+			height: var(--app-height) !important;
+			max-height: var(--app-height) !important;
 			min-height: 0 !important;
+			/* Position relative for absolute-positioned children */
+			position: relative !important;
 			/* Don't set overflow:hidden here - it prevents scrollable slides from working */
 			display: flex;
 			flex-direction: column;
@@ -2126,11 +2094,12 @@ console.log('[Index] Content about object:', content?.about);
 		}
 
 		/* Ensure active main slide and adjacent slides are visible but properly layered */
+		/* For card-reveal effect: next slide (coming from below) must be ON TOP */
 		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide-active {
-			z-index: 3;
+			z-index: 2;
 		}
 		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide-next {
-			z-index: 2;
+			z-index: 3; /* Highest - incoming slide appears on top */
 		}
 		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide-prev {
 			z-index: 1;
@@ -2309,16 +2278,27 @@ console.log('[Index] Content about object:', content?.about);
 			border-top-right-radius: 20px;
 		}
 
-		/* Skills section - contains horizontal carousel, no vertical scroll */
+		/* Skills section - contains horizontal carousel, no vertical scroll.
+		   Same absolute positioning fix as Projects - forces inner content
+		   to match slide dimensions exactly. */
 		.mobile-swiper-active .swiper-slide#skills {
 			overflow: hidden !important;
+			position: relative !important;
 		}
 
-		/* Skills section wrapper hierarchy - ensure all containers flex properly */
-		.mobile-swiper-active .swiper-slide#skills .skills-section {
-			height: 100%;
+		/* Skills section wrapper hierarchy - absolutely positioned to fill slide */
+		.mobile-swiper-active .swiper-slide#skills > .skills-section {
+			position: absolute !important;
+			top: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			bottom: 0 !important;
+			height: auto !important;
+			min-height: 0 !important;
+			max-height: none !important;
 			display: flex;
 			flex-direction: column;
+			overflow: hidden;
 		}
 
 		.mobile-swiper-active .swiper-slide#skills .skills-section > div {
@@ -2343,8 +2323,8 @@ console.log('[Index] Content about object:', content?.about);
 			flex-direction: column;
 			width: 100%;
 			/* Explicit viewport-based height for Swiper */
-			height: calc(100dvh - 200px) !important;
-			min-height: calc(100dvh - 200px) !important;
+			height: calc(var(--app-height) - 200px) !important;
+			min-height: calc(var(--app-height) - 200px) !important;
 		}
 
 		/* Skills carousel container - take full height of wrapper */
@@ -2356,15 +2336,27 @@ console.log('[Index] Content about object:', content?.about);
 			min-height: 100% !important;
 		}
 
-		/* Projects section - contains horizontal carousel, no vertical scroll */
+		/* Projects section - contains horizontal carousel, no vertical scroll.
+		   The inner .projects section must be absolutely positioned to force it
+		   to match the slide dimensions. height:100% / max-height:100% don't
+		   reliably constrain flex children when content overflows in all browsers. */
 		.mobile-swiper-active .swiper-slide#projects {
 			overflow: hidden !important;
+			position: relative !important;
 		}
 
-		.mobile-swiper-active .swiper-slide#projects .projects {
-			height: 100%;
+		.mobile-swiper-active .swiper-slide#projects > .projects {
+			position: absolute !important;
+			top: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			bottom: 0 !important;
+			height: auto !important;
+			min-height: 0 !important;
+			max-height: none !important;
 			display: flex;
 			flex-direction: column;
+			overflow: hidden;
 		}
 
 		.mobile-swiper-active .swiper-slide#projects .projects > div {
@@ -2396,23 +2388,51 @@ console.log('[Index] Content about object:', content?.about);
 		/* Reset base scroll-panel styles when in Swiper mode */
 		.mobile-swiper-active .scroll-panel {
 			min-height: 0 !important;
-			max-height: 100dvh !important;
-			max-height: -webkit-fill-available !important;
+			max-height: var(--app-height) !important;
 			position: relative;
 			height: 100% !important;
 		}
 
+		/* Inner .section elements - absolute positioning to guarantee they
+		   match the slide size. height:100% is unreliable in Swiper's flex context. */
 		.mobile-swiper-active .scroll-panel .section {
-			position: relative;
+			position: absolute !important;
+			top: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			bottom: 0 !important;
 			min-height: 0 !important;
-			height: 100% !important;
-			max-height: 100dvh !important;
-			max-height: -webkit-fill-available !important;
 		}
 
-		/* Ensure content doesn't overflow main slides */
+		/* Hero - same absolute positioning fix */
+		.mobile-swiper-active .scroll-panel .hero {
+			position: absolute !important;
+			top: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			bottom: 0 !important;
+			min-height: 0 !important;
+		}
+
+		/* About - same absolute positioning fix */
+		.mobile-swiper-active .scroll-panel .about {
+			position: absolute !important;
+			top: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			bottom: 0 !important;
+			min-height: 0 !important;
+		}
+
+		/* Ensure content doesn't overflow main slides.
+		   Use absolute positioning to guarantee children match slide size.
+		   height:100% / max-height:100% are unreliable in Swiper's flex context. */
 		.mobile-swiper-active .scroll-stage.swiper > .swiper-wrapper > .swiper-slide > .container {
-			max-height: 100%;
+			position: absolute !important;
+			top: 0 !important;
+			left: 0 !important;
+			right: 0 !important;
+			bottom: 0 !important;
 			overflow: hidden;
 		}
 
@@ -2421,11 +2441,11 @@ console.log('[Index] Content about object:', content?.about);
 			overflow: visible;
 		}
 
-		/* Skills and Projects containers should not overflow */
+		/* Skills and Projects inner sections are absolutely positioned above.
+		   This rule ensures they remain flex containers with hidden overflow. */
 		.mobile-swiper-active .swiper-slide#skills .skills-section,
 		.mobile-swiper-active .swiper-slide#projects .container {
 			overflow: hidden;
-			height: 100%;
 			display: flex;
 			flex-direction: column;
 		}
@@ -2458,12 +2478,11 @@ console.log('[Index] Content about object:', content?.about);
 			padding-bottom: 100px;
 		}
 
-		/* Fix for contact section layout */
+		/* Fix for contact section layout (inner section is already absolute from generic rule) */
 		.mobile-swiper-active .swiper-slide#contact .section {
 			display: flex;
 			flex-direction: column;
 			justify-content: center;
-			min-height: 100%;
 		}
 
 		/* Nested horizontal Swipers - Skills and Projects carousels */
@@ -2546,6 +2565,47 @@ console.log('[Index] Content about object:', content?.about);
 			background-color: #ff8c3c !important;
 			opacity: 1 !important;
 			transform: scale(1.3) !important;
+		}
+
+		/* Pull-to-refresh indicator */
+		.pull-to-refresh-indicator {
+			position: fixed;
+			top: 0;
+			left: 50%;
+			transform: translateX(-50%) translateY(0);
+			z-index: 9999;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 4px;
+			padding: 12px 20px;
+			background: var(--bg-primary, #fff);
+			border-radius: 0 0 12px 12px;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+			opacity: 0;
+			transition: opacity 0.2s ease, transform 0.2s ease;
+			pointer-events: none;
+		}
+
+		html.dark .pull-to-refresh-indicator {
+			background: var(--bg-primary, #1a1a2e);
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+		}
+
+		.pull-to-refresh-indicator .pull-arrow {
+			font-size: 18px;
+			color: var(--color-accent-secondary, #D97757);
+			transition: transform 0.2s ease;
+		}
+
+		.pull-to-refresh-indicator .pull-text {
+			font-size: 12px;
+			font-weight: 500;
+			color: var(--text-secondary, #666);
+		}
+
+		html.dark .pull-to-refresh-indicator .pull-text {
+			color: var(--text-secondary, #aaa);
 		}
 	}
 
